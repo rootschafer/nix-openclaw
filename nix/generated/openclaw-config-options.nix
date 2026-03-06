@@ -1,4 +1,4 @@
-# Generated from upstream OpenClaw schema at rev e601bf2d8ef41a4c799c6742e7a9cd875e83e9f7. DO NOT EDIT.
+# Generated from upstream OpenClaw schema at rev ae96a8191649c5d1d44c6e06f8503015216cd880. DO NOT EDIT.
 # Generator: nix/scripts/generate-config-options.ts
 { lib }:
 let
@@ -338,6 +338,10 @@ in
         };
         mode = lib.mkOption {
           type = t.nullOr (t.oneOf [ (t.enum [ "default" ]) (t.enum [ "safeguard" ]) ]);
+          default = null;
+        };
+        postCompactionSections = lib.mkOption {
+          type = t.nullOr (t.listOf (t.str));
           default = null;
         };
         qualityGuard = lib.mkOption {
@@ -9910,7 +9914,7 @@ in
         default = null;
       };
       retryOn = lib.mkOption {
-        type = t.nullOr (t.listOf (t.enum [ "rate_limit" "network" "timeout" "server_error" ]));
+        type = t.nullOr (t.listOf (t.enum [ "rate_limit" "overloaded" "network" "timeout" "server_error" ]));
         default = null;
       };
     }; });
