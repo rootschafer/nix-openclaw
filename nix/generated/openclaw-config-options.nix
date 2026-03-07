@@ -1,4 +1,4 @@
-# Generated from upstream OpenClaw schema at rev 8e6acded8274ccaf788fa098162013f8e2d2e97e. DO NOT EDIT.
+# Generated from upstream OpenClaw schema at rev 10d0e3f3ca92326df0ca071fabffe463742f263c. DO NOT EDIT.
 # Generator: nix/scripts/generate-config-options.ts
 { lib }:
 let
@@ -11761,7 +11761,37 @@ in
         type = t.str;
       };
       headers = lib.mkOption {
-        type = t.nullOr (t.attrsOf (t.str));
+        type = t.nullOr (t.attrsOf (t.oneOf [ (t.str) (t.oneOf [ (t.submodule { options = {
+        id = lib.mkOption {
+          type = t.str;
+        };
+        provider = lib.mkOption {
+          type = t.str;
+        };
+        source = lib.mkOption {
+          type = t.enum [ "env" ];
+        };
+      }; }) (t.submodule { options = {
+        id = lib.mkOption {
+          type = t.str;
+        };
+        provider = lib.mkOption {
+          type = t.str;
+        };
+        source = lib.mkOption {
+          type = t.enum [ "file" ];
+        };
+      }; }) (t.submodule { options = {
+        id = lib.mkOption {
+          type = t.str;
+        };
+        provider = lib.mkOption {
+          type = t.str;
+        };
+        source = lib.mkOption {
+          type = t.enum [ "exec" ];
+        };
+      }; }) ]) ]));
         default = null;
       };
       injectNumCtxForOpenAICompat = lib.mkOption {
