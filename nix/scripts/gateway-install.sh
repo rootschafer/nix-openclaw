@@ -115,6 +115,18 @@ if [ -n "$hasown_src" ]; then
   fi
 fi
 
+# Work around missing long dependency for @whiskeysockets/baileys in pnpm layout.
+long_src="$(find "$out/lib/openclaw/node_modules/.pnpm" -path "*/long@*/node_modules/long" -print | head -n 1)"
+baileys_pkgs="$(find "$out/lib/openclaw/node_modules/.pnpm" -path "*/node_modules/@whiskeysockets/baileys" -print)"
+if [ -n "$long_src" ] && [ -n "$baileys_pkgs" ]; then
+  for pkg in $baileys_pkgs; do
+    if [ ! -e "$pkg/node_modules/long" ]; then
+      mkdir -p "$pkg/node_modules"
+      ln -s "$long_src" "$pkg/node_modules/long"
+    fi
+  done
+fi
+
 log_step "validate node_modules symlinks" check_no_broken_symlinks "$out/lib/openclaw/node_modules"
 
 bash -e -c '. "$STDENV_SETUP"; makeWrapper "$NODE_BIN" "$out/bin/openclaw" --add-flags "$out/lib/openclaw/dist/index.js" --set-default OPENCLAW_NIX_MODE "1"'
