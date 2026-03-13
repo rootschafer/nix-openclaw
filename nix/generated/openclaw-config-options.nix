@@ -1,4 +1,4 @@
-# Generated from upstream OpenClaw schema at rev a9b5fe409958633bb0422c6443e20d1bdfb1c501. DO NOT EDIT.
+# Generated from upstream OpenClaw schema at rev 5f0e97b22ae9c4dc2fb9c48da9c08eeb6fa326af. DO NOT EDIT.
 # Generator: nix/scripts/generate-config-options.ts
 { lib }:
 let
@@ -2506,7 +2506,7 @@ in
         type = t.str;
       };
       driver = lib.mkOption {
-        type = t.nullOr (t.oneOf [ (t.enum [ "openclaw" ]) (t.enum [ "clawd" ]) (t.enum [ "extension" ]) ]);
+        type = t.nullOr (t.oneOf [ (t.enum [ "openclaw" ]) (t.enum [ "clawd" ]) (t.enum [ "extension" ]) (t.enum [ "existing-session" ]) ]);
         default = null;
       };
     }; }));
