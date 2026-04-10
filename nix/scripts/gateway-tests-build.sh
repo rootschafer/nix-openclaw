@@ -35,7 +35,61 @@ export NPM_CONFIG_STORE_DIR="$store_path"
 export NPM_CONFIG_STORE_PATH="$store_path"
 export HOME="$(mktemp -d)"
 
-log_step "pnpm install (tests/config)" pnpm install --offline --frozen-lockfile --ignore-scripts --store-dir "$store_path"
+log_step "pnpm install (tests/config)" pnpm install --offline --frozen-lockfile --ignore-scripts --prod=false --store-dir "$store_path"
+
+ensure_root_package_link() {
+  pkg="$1"
+  root_path="node_modules/$pkg"
+
+  if [ -e "$root_path" ]; then
+    return 0
+  fi
+
+  pkg_dir="$(find node_modules/.pnpm -path "*/node_modules/$pkg" -type d | head -n 1)"
+  if [ -z "$pkg_dir" ]; then
+    return 0
+  fi
+
+  mkdir -p "$(dirname "$root_path")"
+  ln -s "$pkg_dir" "$root_path"
+}
+
+ensure_root_bin_link() {
+  bin_name="$1"
+  target_rel="$2"
+  bin_path="node_modules/.bin/$bin_name"
+
+  mkdir -p "$(dirname "$bin_path")"
+  rm -f "$bin_path"
+  ln -s "$target_rel" "$bin_path"
+}
+
+ensure_root_package_link "tsdown"
+ensure_root_package_link "tsx"
+ensure_root_package_link "vitest"
+ensure_root_bin_link "tsdown" "../tsdown/dist/run.mjs"
+ensure_root_bin_link "tsx" "../tsx/dist/cli.mjs"
+ensure_root_bin_link "vitest" "../vitest/vitest.mjs"
+
+tsdown_cli="node_modules/tsdown/dist/run.mjs"
+if [ ! -f "$tsdown_cli" ]; then
+  tsdown_cli="$(find node_modules -path '*/tsdown/dist/run.mjs' -type f | head -n 1)"
+fi
+
+if [ -z "${tsdown_cli:-}" ] || [ ! -f "$tsdown_cli" ]; then
+  echo "tsdown CLI not found under ./node_modules" >&2
+  exit 1
+fi
+
+tsc_cli="node_modules/typescript/bin/tsc"
+if [ ! -f "$tsc_cli" ]; then
+  tsc_cli="$(find node_modules -path '*/typescript/bin/tsc' -type f | head -n 1)"
+fi
+
+if [ -z "${tsc_cli:-}" ] || [ ! -f "$tsc_cli" ]; then
+  echo "TypeScript CLI not found under ./node_modules" >&2
+  exit 1
+fi
 
 if [ -z "${STDENV_SETUP:-}" ]; then
   echo "STDENV_SETUP is not set" >&2
@@ -47,3 +101,15 @@ if [ ! -f "$STDENV_SETUP" ]; then
 fi
 
 log_step "patchShebangs node_modules/.bin" bash -e -c ". \"$STDENV_SETUP\"; patchShebangs node_modules/.bin"
+
+log_step "node $tsdown_cli" node "$tsdown_cli" --config-loader unrun --logLevel warn
+log_step "node scripts/build-stamp.mjs" node scripts/build-stamp.mjs
+log_step "node $tsc_cli" node "$tsc_cli" -p tsconfig.plugin-sdk.dts.json
+log_step "node --import tsx scripts/write-plugin-sdk-entry-dts.ts" node --import tsx scripts/write-plugin-sdk-entry-dts.ts
+if [ -f "scripts/copy-plugin-sdk-root-alias.mjs" ]; then
+  log_step "node scripts/copy-plugin-sdk-root-alias.mjs" node scripts/copy-plugin-sdk-root-alias.mjs
+fi
+if [ -f "scripts/copy-bundled-plugin-metadata.mjs" ]; then
+  log_step "node scripts/copy-bundled-plugin-metadata.mjs" node scripts/copy-bundled-plugin-metadata.mjs
+fi
+log_step "node scripts/check-plugin-sdk-exports.mjs" node scripts/check-plugin-sdk-exports.mjs

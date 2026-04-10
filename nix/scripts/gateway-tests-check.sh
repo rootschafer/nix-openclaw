@@ -16,10 +16,9 @@ export OPENCLAW_LOG_DIR="${TMPDIR}/openclaw-logs"
 mkdir -p "$OPENCLAW_LOG_DIR"
 mkdir -p /tmp/openclaw || true
 chmod 700 /tmp/openclaw || true
-export OPENCLAW_BUNDLED_PLUGINS_DIR="${TMPDIR}/openclaw-empty-extensions"
-mkdir -p "$OPENCLAW_BUNDLED_PLUGINS_DIR"
+unset OPENCLAW_BUNDLED_PLUGINS_DIR
 export VITEST_POOL="forks"
 export VITEST_MIN_WORKERS="2"
 export VITEST_MAX_WORKERS="2"
 
-pnpm vitest run --config vitest.gateway.config.ts --testTimeout=20000
+pnpm exec vitest run --config vitest.gateway.config.ts --testTimeout=20000

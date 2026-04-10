@@ -82,6 +82,12 @@ log_step "build: canvas:a2ui:bundle" pnpm canvas:a2ui:bundle
 log_step "build: tsdown" pnpm exec tsdown
 log_step "build: plugin-sdk dts" pnpm build:plugin-sdk:dts
 log_step "build: write-plugin-sdk-entry-dts" node --import tsx scripts/write-plugin-sdk-entry-dts.ts
+if [ -f "scripts/copy-plugin-sdk-root-alias.mjs" ]; then
+  log_step "build: copy-plugin-sdk-root-alias" node scripts/copy-plugin-sdk-root-alias.mjs
+fi
+if [ -f "scripts/copy-bundled-plugin-metadata.mjs" ]; then
+  log_step "build: copy-bundled-plugin-metadata" node scripts/copy-bundled-plugin-metadata.mjs
+fi
 log_step "build: canvas-a2ui-copy" node --import tsx scripts/canvas-a2ui-copy.ts
 log_step "build: copy-hook-metadata" node --import tsx scripts/copy-hook-metadata.ts
 log_step "build: write-build-info" node --import tsx scripts/write-build-info.ts
@@ -93,3 +99,7 @@ log_step "pnpm prune --prod" env CI=true pnpm prune --prod
 
 # Reduce output size (pnpm implementation detail; safe to remove)
 rm -rf node_modules/.pnpm/node_modules
+
+# pnpm prune can leave orphaned .bin links behind for removed prod deps.
+# Keep install-phase symlink validation strict by dropping only broken links here.
+find node_modules -xtype l -delete
