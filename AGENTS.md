@@ -53,12 +53,11 @@ OpenClaw packaging:
 - The gateway package must include Control UI assets (run `pnpm ui:build` in the Nix build).
 
 Golden path for pins (yolo + manual bumps):
-- Hourly GitHub Action **Yolo Update Pins** runs `scripts/update-pins.sh`, which:
-  - Picks the latest stable upstream OpenClaw release tag with the macOS zip asset
-  - Resolves the source pin from that release tag ref, not upstream `main`
-  - Rebuilds gateway to refresh `pnpmDepsHash`
-  - Regenerates `nix/generated/openclaw-config-options.nix` from that release source
-  - Updates app pin/hash, commits, rebases, pushes to `main`
+- Hourly GitHub Action **Yolo Update Pins** selects the newest stable upstream OpenClaw release, validates it on the same Linux + macOS contract as `CI`, and only then promotes it.
+- If the newest stable release is missing the required public macOS zip asset, yolo fails red and leaves the current pin untouched.
+- `scripts/update-pins.sh` is the updater boundary:
+  - `select` picks the newest stable release, resolves the source pin from that release tag ref, and emits the exact app asset URL
+  - `apply <tag> <sha> <app-url>` materializes the source pin, app pin, `pnpmDepsHash`, and generated config options for that exact release
 - Manual bump (rare): trigger yolo manually with `gh workflow run "Yolo Update Pins"`.
 - To verify freshness: `git pull --ff-only`, compare `nix/packages/openclaw-app.nix` to `gh release view --repo openclaw/openclaw --json tagName`, and compare `nix/sources/openclaw-source.nix` to `git ls-remote https://github.com/openclaw/openclaw.git "refs/tags/<tag>" "refs/tags/<tag>^{}"`.
 - Recovery note: repin to the latest stable OpenClaw release first, fix Nix-owned seams before touching gateway behavior, and avoid broad `gateway-postpatch.sh` behavior hacks.

@@ -689,11 +689,12 @@ Pins live in:
 
 ### Automated pipeline
 
-1) Hourly **Yolo Update Pins** polls the latest non-prerelease OpenClaw GitHub release.  
-2) If the pinned stable release already matches that tag, it exits cleanly.  
-3) If a newer stable release exists, it updates the gateway source pin from the release tag ref, updates the app asset pin from the matching release zip, and regenerates config options from that same release source.  
-4) It pushes one release-mirroring commit to `main`.  
-5) Repository `CI` on Linux + macOS is the acceptance contract for that mirrored release.
+1) Hourly **Yolo Update Pins** polls the newest non-prerelease OpenClaw GitHub release.
+2) If the pinned stable release already matches that newest stable release, it exits cleanly.
+3) If the newest stable release is missing the required public macOS release zip, yolo fails red and leaves the current pin untouched.
+4) If the newest stable release is complete, yolo materializes the source pin from the release tag ref, updates the app asset pin from the matching release zip, and regenerates config options from that same release source.
+5) Yolo then validates that exact release on the same Linux + macOS contract as repository `CI`.
+6) Only after both validations pass does yolo push one release-mirroring commit to `main`.
 
 ---
 

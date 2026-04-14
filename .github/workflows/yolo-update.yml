@@ -10,11 +10,106 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  update:
+  select:
     runs-on: ubuntu-latest
+    outputs:
+      has_update: ${{ steps.select.outputs.has_update }}
+      release_tag: ${{ steps.select.outputs.release_tag }}
+      release_sha: ${{ steps.select.outputs.release_sha }}
+      app_url: ${{ steps.select.outputs.app_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select release
+        id: select
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          selection="$(scripts/update-pins.sh select)"
+          if [[ -z "$selection" ]]; then
+            echo "has_update=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "has_update=true" >> "$GITHUB_OUTPUT"
+          while IFS='=' read -r key value; do
+            echo "${key}=${value}" >> "$GITHUB_OUTPUT"
+          done <<<"$selection"
+
+  validate-linux:
+    needs: select
+    if: needs.select.outputs.has_update == 'true'
+    runs-on: blacksmith-16vcpu-ubuntu-2404
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Materialize selected release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          scripts/update-pins.sh apply \
+            "${{ needs.select.outputs.release_tag }}" \
+            "${{ needs.select.outputs.release_sha }}" \
+            "${{ needs.select.outputs.app_url }}"
+
+      - name: Verify flake.lock owners
+        run: scripts/check-flake-lock-owners.sh
+
+      - name: Run Linux CI aggregator
+        run: nix build .#checks.x86_64-linux.ci --accept-flake-config
+
+      - name: Dump failing gateway test log
+        if: failure()
+        run: |
+          drv="$(nix eval --raw .#checks.x86_64-linux.gateway-tests.drvPath --accept-flake-config)"
+          nix log "$drv" | tail -n 400 || true
+
+  validate-macos:
+    needs: select
+    if: needs.select.outputs.has_update == 'true'
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v13
+
+      - name: Materialize selected release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          scripts/update-pins.sh apply \
+            "${{ needs.select.outputs.release_tag }}" \
+            "${{ needs.select.outputs.release_sha }}" \
+            "${{ needs.select.outputs.app_url }}"
+
+      - name: Build Darwin CI aggregator
+        run: nix build .#checks.aarch64-darwin.ci --accept-flake-config
+
+      - name: Run HM activation
+        run: scripts/hm-activation-macos.sh
+
+  promote:
+    needs:
+      - select
+      - validate-linux
+      - validate-macos
+    if: needs.select.outputs.has_update == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,10 +119,48 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v13
 
-      - name: Run updater
+      - name: Promote selected release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           git config user.name "openclaw-ci"
           git config user.email "ci@openclaw.local"
-          scripts/update-pins.sh
+
+          scripts/update-pins.sh apply \
+            "${{ needs.select.outputs.release_tag }}" \
+            "${{ needs.select.outputs.release_sha }}" \
+            "${{ needs.select.outputs.app_url }}"
+
+          if git diff --quiet -- \
+            nix/sources/openclaw-source.nix \
+            nix/packages/openclaw-app.nix \
+            nix/generated/openclaw-config-options.nix; then
+            echo "No pin changes detected."
+            exit 0
+          fi
+
+          git add \
+            nix/sources/openclaw-source.nix \
+            nix/packages/openclaw-app.nix \
+            nix/generated/openclaw-config-options.nix
+
+          git commit -F - <<EOF
+          🤖 codex: mirror OpenClaw stable release ${{ needs.select.outputs.release_tag }}
+
+          What:
+          - update nix-openclaw to the latest stable OpenClaw release
+          - refresh the gateway source pin, app asset pin, and generated config options
+
+          Why:
+          - keep nix-openclaw aligned with upstream stable releases without bypassing repository CI
+
+          Tests:
+          - nix build .#checks.x86_64-linux.ci --accept-flake-config
+          - nix build .#checks.aarch64-darwin.ci --accept-flake-config
+          - scripts/hm-activation-macos.sh
+          EOF
+
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main

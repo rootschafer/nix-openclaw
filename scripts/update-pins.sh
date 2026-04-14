@@ -12,7 +12,15 @@ app_file="$repo_root/nix/packages/openclaw-app.nix"
 config_options_file="$repo_root/nix/generated/openclaw-config-options.nix"
 
 log() {
-  printf '>> %s\n' "$*"
+  printf '>> %s\n' "$*" >&2
+}
+
+usage() {
+  cat >&2 <<'EOF'
+Usage:
+  scripts/update-pins.sh select
+  scripts/update-pins.sh apply <release_tag> <release_sha> <app_url>
+EOF
 }
 
 require_cmd() {
@@ -33,14 +41,17 @@ resolve_release_tag_sha() {
   local tag_refs
   tag_refs=$(git ls-remote https://github.com/openclaw/openclaw.git "refs/tags/${tag}" "refs/tags/${tag}^{}" || true)
   if [[ -z "$tag_refs" ]]; then
-    echo "" && return 0
+    echo ""
+    return 0
   fi
+
   local deref_sha plain_sha
   deref_sha=$(printf '%s\n' "$tag_refs" | awk '/\^\{\}$/ { print $1; exit }')
   if [[ -n "$deref_sha" ]]; then
     printf '%s\n' "$deref_sha"
     return 0
   fi
+
   plain_sha=$(printf '%s\n' "$tag_refs" | awk '!/\^\{\}$/ { print $1; exit }')
   printf '%s\n' "$plain_sha"
 }
@@ -76,7 +87,6 @@ regenerate_config_options() {
   local source_store_path="$2"
   local tmp_src
   tmp_src=$(mktemp -d)
-  trap 'rm -rf "$tmp_src"' RETURN
 
   if [[ -d "$source_store_path" ]]; then
     cp -R "$source_store_path" "$tmp_src/src"
@@ -85,6 +95,7 @@ regenerate_config_options() {
     tar -xf "$source_store_path" -C "$tmp_src/src" --strip-components=1
   else
     echo "Source path not found: $source_store_path" >&2
+    rm -rf "$tmp_src"
     exit 1
   fi
 
@@ -95,111 +106,144 @@ regenerate_config_options() {
 
   nix shell --extra-experimental-features "nix-command flakes" nixpkgs#nodejs_22 nixpkgs#pnpm_10 -c \
     bash -c "cd '$tmp_src/src' && OPENCLAW_SCHEMA_REV='${selected_sha}' pnpm exec tsx '$repo_root/nix/scripts/generate-config-options.ts' --repo . --out '$config_options_file'"
+
+  rm -rf "$tmp_src"
 }
 
-require_cmd jq
-require_cmd gh
-require_cmd nix
-require_cmd perl
+latest_stable_release() {
+  local release_json="$1"
+  printf '%s' "$release_json" | jq -c '
+    ([.[] | select(.draft | not) | select(.prerelease | not)][0]) // empty
+  '
+}
 
-current_rev=$(current_field "$source_file" "rev")
-current_version=$(current_field "$app_file" "version")
+select_release() {
+  local release_json current_rev current_version selected_release release_tag app_url release_version selected_sha
+  current_rev=$(current_field "$source_file" "rev")
+  current_version=$(current_field "$app_file" "version")
 
-log "Fetching latest stable OpenClaw release metadata"
-release_json=$(gh api '/repos/openclaw/openclaw/releases?per_page=20')
-release_tag=$(printf '%s' "$release_json" | jq -r '
-  [.[] | select(.draft | not) | select(.prerelease | not)
-   | select([.assets[]?.name | (test("^OpenClaw-.*\\.zip$") and (test("dSYM") | not))] | any)
-  ][0].tag_name // empty
-')
-if [[ -z "$release_tag" ]]; then
-  echo "Failed to resolve latest stable release tag with OpenClaw app zip asset" >&2
-  exit 1
-fi
+  log "Fetching latest stable OpenClaw release metadata"
+  release_json=$(gh api '/repos/openclaw/openclaw/releases?per_page=20')
+  selected_release=$(latest_stable_release "$release_json")
 
-selected_sha=$(resolve_release_tag_sha "$release_tag")
-if [[ -z "$selected_sha" ]]; then
-  echo "Failed to resolve tag SHA for $release_tag" >&2
-  exit 1
-fi
+  if [[ -z "$selected_release" ]]; then
+    echo "Failed to resolve latest stable OpenClaw release" >&2
+    exit 1
+  fi
 
-app_url=$(printf '%s' "$release_json" | jq -r --arg tag "$release_tag" '
-  [.[] | select(.tag_name == $tag)][0].assets[]
-  | select(.name | (test("^OpenClaw-.*\\.zip$") and (test("dSYM") | not)))
-  | .browser_download_url
-' | head -n 1)
-if [[ -z "$app_url" ]]; then
-  echo "Failed to resolve app asset URL for $release_tag" >&2
-  exit 1
-fi
+  release_tag=$(printf '%s' "$selected_release" | jq -r '.tag_name // empty')
+  if [[ -z "$release_tag" ]]; then
+    echo "Latest stable OpenClaw release is missing tag_name" >&2
+    exit 1
+  fi
 
-release_version="${release_tag#v}"
+  app_url=$(printf '%s' "$selected_release" | jq -r '
+    [.assets[]
+      | select(.name | (test("^OpenClaw-.*\\.zip$") and (test("dSYM") | not)))
+      | .browser_download_url][0] // empty
+  ')
+  if [[ -z "$app_url" ]]; then
+    echo "Latest stable OpenClaw release ${release_tag} is missing the required macOS zip asset" >&2
+    exit 1
+  fi
 
-log "Selected stable release: $release_tag ($selected_sha)"
-if [[ "$current_version" == "$release_version" && "$current_rev" == "$selected_sha" ]]; then
-  echo "Already pinned to latest stable release: $release_tag"
-  exit 0
-fi
+  selected_sha=$(resolve_release_tag_sha "$release_tag")
+  if [[ -z "$selected_sha" ]]; then
+    echo "Failed to resolve tag SHA for $release_tag" >&2
+    exit 1
+  fi
 
-source_url="https://github.com/openclaw/openclaw/archive/${selected_sha}.tar.gz"
-source_prefetch=$(prefetch_json "$source_url")
-source_hash=$(printf '%s' "$source_prefetch" | jq -r '.hash // empty')
-source_store_path=$(printf '%s' "$source_prefetch" | jq -r '.path // .storePath // empty')
-if [[ -z "$source_hash" || -z "$source_store_path" ]]; then
-  echo "Failed to resolve source hash/path for $selected_sha" >&2
-  exit 1
-fi
+  release_version="${release_tag#v}"
+  log "Selected stable release: $release_tag ($selected_sha)"
+  if [[ "$current_version" == "$release_version" && "$current_rev" == "$selected_sha" ]]; then
+    exit 0
+  fi
 
-app_prefetch=$(prefetch_json "$app_url")
-app_hash=$(printf '%s' "$app_prefetch" | jq -r '.hash // empty')
-if [[ -z "$app_hash" ]]; then
-  echo "Failed to resolve app hash for $release_tag" >&2
-  exit 1
-fi
+  printf 'release_tag=%s\n' "$release_tag"
+  printf 'release_sha=%s\n' "$selected_sha"
+  printf 'app_url=%s\n' "$app_url"
+  printf 'release_version=%s\n' "$release_version"
+}
 
-backup_dir=$(mktemp -d)
-trap 'rm -rf "$backup_dir"' EXIT
-cp "$source_file" "$backup_dir/source.nix"
-cp "$app_file" "$backup_dir/app.nix"
-cp "$config_options_file" "$backup_dir/config-options.nix"
+apply_release() {
+  local release_tag="$1"
+  local selected_sha="$2"
+  local app_url="$3"
+  local release_version source_url source_prefetch source_hash source_store_path app_prefetch app_hash
+  local backup_dir success
 
-perl -0pi -e "s|rev = \"[^\"]+\";|rev = \"${selected_sha}\";|" "$source_file"
-perl -0pi -e "s|hash = \"[^\"]+\";|hash = \"${source_hash}\";|" "$source_file"
-perl -0pi -e 's|pnpmDepsHash = "[^"]*";|pnpmDepsHash = "";|' "$source_file"
+  release_version="${release_tag#v}"
+  source_url="https://github.com/openclaw/openclaw/archive/${selected_sha}.tar.gz"
 
-perl -0pi -e "s|version = \"[^\"]+\";|version = \"${release_version}\";|" "$app_file"
-perl -0pi -e "s|url = \"[^\"]+\";|url = \"${app_url}\";|" "$app_file"
-perl -0pi -e "s|hash = \"[^\"]+\";|hash = \"${app_hash}\";|" "$app_file"
+  source_prefetch=$(prefetch_json "$source_url")
+  source_hash=$(printf '%s' "$source_prefetch" | jq -r '.hash // empty')
+  source_store_path=$(printf '%s' "$source_prefetch" | jq -r '.path // .storePath // empty')
+  if [[ -z "$source_hash" || -z "$source_store_path" ]]; then
+    echo "Failed to resolve source hash/path for $selected_sha" >&2
+    exit 1
+  fi
 
-if ! refresh_pnpm_hash; then
-  cp "$backup_dir/source.nix" "$source_file"
-  cp "$backup_dir/app.nix" "$app_file"
-  cp "$backup_dir/config-options.nix" "$config_options_file"
-  exit 1
-fi
+  app_prefetch=$(prefetch_json "$app_url")
+  app_hash=$(printf '%s' "$app_prefetch" | jq -r '.hash // empty')
+  if [[ -z "$app_hash" ]]; then
+    echo "Failed to resolve app hash for $release_tag" >&2
+    exit 1
+  fi
 
-regenerate_config_options "$selected_sha" "$source_store_path"
+  backup_dir=$(mktemp -d)
+  success=0
+  cp "$source_file" "$backup_dir/source.nix"
+  cp "$app_file" "$backup_dir/app.nix"
+  cp "$config_options_file" "$backup_dir/config-options.nix"
 
-if git diff --quiet -- "$source_file" "$app_file" "$config_options_file"; then
-  echo "No pin changes detected."
-  exit 0
-fi
+  cleanup_apply() {
+    if [[ "$success" -ne 1 ]]; then
+      cp "$backup_dir/source.nix" "$source_file"
+      cp "$backup_dir/app.nix" "$app_file"
+      cp "$backup_dir/config-options.nix" "$config_options_file"
+    fi
+    rm -rf "$backup_dir"
+  }
+  trap cleanup_apply RETURN
 
-git add "$source_file" "$app_file" "$config_options_file"
-git commit -F - <<EOF
-🤖 codex: mirror OpenClaw stable release ${release_tag}
+  perl -0pi -e "s|rev = \"[^\"]+\";|rev = \"${selected_sha}\";|" "$source_file"
+  perl -0pi -e "s|hash = \"[^\"]+\";|hash = \"${source_hash}\";|" "$source_file"
+  perl -0pi -e 's|pnpmDepsHash = "[^"]*";|pnpmDepsHash = "";|' "$source_file"
 
-What:
-- update nix-openclaw to the latest stable OpenClaw release
-- refresh the gateway source pin, app asset pin, and generated config options
+  perl -0pi -e "s|version = \"[^\"]+\";|version = \"${release_version}\";|" "$app_file"
+  perl -0pi -e "s|url = \"[^\"]+\";|url = \"${app_url}\";|" "$app_file"
+  perl -0pi -e "s|hash = \"[^\"]+\";|hash = \"${app_hash}\";|" "$app_file"
 
-Why:
-- keep nix-openclaw aligned with upstream stable releases instead of upstream main churn
+  refresh_pnpm_hash
+  regenerate_config_options "$selected_sha" "$source_store_path"
 
-Tests:
-- nix build .#openclaw-gateway --accept-flake-config
-EOF
+  success=1
+}
 
-git fetch origin main
-git rebase origin/main
-git push origin HEAD:main
+mode="${1:-}"
+case "$mode" in
+  select)
+    if [[ $# -ne 1 ]]; then
+      usage
+      exit 1
+    fi
+    require_cmd jq
+    require_cmd gh
+    select_release
+    ;;
+  apply)
+    if [[ $# -ne 4 ]]; then
+      usage
+      exit 1
+    fi
+    require_cmd jq
+    require_cmd gh
+    require_cmd nix
+    require_cmd perl
+    apply_release "$2" "$3" "$4"
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
+esac
