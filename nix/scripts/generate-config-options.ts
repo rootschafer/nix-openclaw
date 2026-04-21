@@ -139,6 +139,204 @@ const typeForSchema = (schemaObj: JsonSchema, indent: string): string => {
   return typeExpr;
 };
 
+const isObjectLikeSchema = (schemaObj: JsonSchema): boolean => {
+  const schema = deref(schemaObj, new Set());
+  if (schema.type === "object") return true;
+  if (schema.properties !== undefined) return true;
+  if (schema.additionalProperties !== undefined) return true;
+  return false;
+};
+
+// Drop non-semantic metadata when comparing schemas for deduplication.
+// `description`, `title`, examples, etc. do not affect the generated Nix
+// type, so two branches that differ only in those fields hash equal. Use a
+// deny-list (not an allow-list) so we recurse correctly into nodes with
+// arbitrary child keys — e.g., `properties` whose keys are domain names
+// like "source", "id", "provider" rather than JSON-schema meta keys.
+const NON_SEMANTIC_KEYS = new Set([
+  "description",
+  "title",
+  "markdownDescription",
+  "examples",
+  "example",
+  "$comment",
+  "deprecated",
+  "readOnly",
+  "writeOnly",
+  "$id",
+  "$schema",
+  "$anchor",
+]);
+
+const normalizeForHash = (value: unknown): unknown => {
+  if (value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map(normalizeForHash);
+  const obj = value as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(obj).sort()) {
+    if (NON_SEMANTIC_KEYS.has(key)) continue;
+    out[key] = normalizeForHash(obj[key]);
+  }
+  return out;
+};
+
+const schemaHashKey = (schema: unknown): string => JSON.stringify(normalizeForHash(schema));
+
+const dedupeSchemas = (branches: JsonSchema[]): JsonSchema[] => {
+  const seen = new Set<string>();
+  const out: JsonSchema[] = [];
+  for (const branch of branches) {
+    const key = schemaHashKey(branch);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(branch);
+  }
+  return out;
+};
+
+const constStringTag = (schemaObj: JsonSchema | undefined): string | null => {
+  if (schemaObj === undefined) return null;
+  const d = deref(schemaObj, new Set());
+  if (typeof d.const === "string") return d.const;
+  if (Array.isArray(d.enum) && d.enum.length === 1 && typeof d.enum[0] === "string") {
+    return d.enum[0];
+  }
+  return null;
+};
+
+type Discriminator = {
+  discriminator: string;
+  variants: { tag: string; schema: JsonSchema }[];
+};
+
+const tryDiscriminator = (branches: JsonSchema[]): Discriminator | null => {
+  if (branches.length < 2) return null;
+  const derefed = branches.map((b) => deref(b, new Set()));
+  if (!derefed.every(isObjectLikeSchema)) return null;
+
+  const propsPerBranch = derefed.map(
+    (b) => (b.properties as Record<string, JsonSchema>) || {},
+  );
+  let commonKeys = Object.keys(propsPerBranch[0]);
+  for (let i = 1; i < propsPerBranch.length; i++) {
+    const keys = new Set(Object.keys(propsPerBranch[i]));
+    commonKeys = commonKeys.filter((k) => keys.has(k));
+  }
+
+  for (const key of commonKeys.sort()) {
+    const tags = propsPerBranch.map((props) => constStringTag(props[key]));
+    if (tags.some((t) => t === null)) continue;
+    const unique = new Set(tags);
+    if (unique.size !== tags.length) continue; // duplicate tag → not a discriminator
+    return {
+      discriminator: key,
+      variants: tags.map((tag, i) => ({ tag: tag as string, schema: derefed[i] })),
+    };
+  }
+  return null;
+};
+
+const renderVariantOptions = (variant: JsonSchema, indent: string): string => {
+  const props = (variant.properties as Record<string, JsonSchema>) || {};
+  const required = new Set((variant.required as string[]) || []);
+  const keys = Object.keys(props).sort();
+  return keys
+    .map((key) => renderOption(key, props[key], required.has(key), indent))
+    .join("\n");
+};
+
+const renderTaggedSubmodule = (disc: Discriminator, indent: string): string => {
+  const variantsIndent = `${indent}  `;
+  const variantIndent = `${variantsIndent}  `;
+  const optionIndent = `${variantIndent}  `;
+  const sorted = [...disc.variants].sort((a, b) => a.tag.localeCompare(b.tag));
+  const lines: string[] = [];
+  lines.push(`taggedSubmodule {`);
+  lines.push(`${variantsIndent}discriminator = ${stringify(disc.discriminator)};`);
+  lines.push(`${variantsIndent}variants = {`);
+  for (const { tag, schema } of sorted) {
+    lines.push(`${variantIndent}${nixAttr(tag)} = {`);
+    const body = renderVariantOptions(schema, optionIndent);
+    if (body.length > 0) lines.push(body);
+    lines.push(`${variantIndent}};`);
+  }
+  lines.push(`${variantsIndent}};`);
+  lines.push(`${indent}}`);
+  return lines.join("\n");
+};
+
+// Last-resort fallback for object-only unions where no discriminator can be
+// identified. Merges all branches into a single permissive submodule.
+// Loses required-field constraints — prefer fixing the upstream schema to
+// use a tagged union so this branch isn't hit.
+const mergeObjectBranches = (branches: JsonSchema[]): JsonSchema => {
+  const propertyVariants: Record<string, JsonSchema[]> = {};
+  let additional: JsonSchema | boolean | undefined;
+  for (const raw of branches) {
+    const branch = deref(raw, new Set());
+    const props = (branch.properties as Record<string, JsonSchema>) || {};
+    for (const [key, value] of Object.entries(props)) {
+      if (!propertyVariants[key]) propertyVariants[key] = [];
+      propertyVariants[key].push(value);
+    }
+    if (branch.additionalProperties !== undefined && additional === undefined) {
+      additional = branch.additionalProperties as JsonSchema | boolean;
+    }
+  }
+
+  const mergedProps: Record<string, JsonSchema> = {};
+  for (const [key, variants] of Object.entries(propertyVariants)) {
+    const unique = dedupeSchemas(variants);
+    if (unique.length === 1) {
+      mergedProps[key] = unique[0];
+      continue;
+    }
+    const allEnumish = unique.every((v) => {
+      const d = deref(v, new Set());
+      return d.const !== undefined || Array.isArray(d.enum);
+    });
+    if (allEnumish) {
+      const values: unknown[] = [];
+      for (const v of unique) {
+        const d = deref(v, new Set());
+        if (d.const !== undefined) {
+          if (!values.some((x) => JSON.stringify(x) === JSON.stringify(d.const))) {
+            values.push(d.const);
+          }
+        } else if (Array.isArray(d.enum)) {
+          for (const entry of d.enum) {
+            if (!values.some((x) => JSON.stringify(x) === JSON.stringify(entry))) {
+              values.push(entry);
+            }
+          }
+        }
+      }
+      mergedProps[key] = { enum: values };
+      continue;
+    }
+    if (unique.every(isObjectLikeSchema)) {
+      const discInner = tryDiscriminator(unique);
+      if (discInner) {
+        mergedProps[key] = { _taggedDiscriminator: discInner } as unknown as JsonSchema;
+      } else {
+        mergedProps[key] = mergeObjectBranches(unique);
+      }
+      continue;
+    }
+    mergedProps[key] = { anyOf: unique };
+  }
+
+  const result: JsonSchema = {
+    type: "object",
+    properties: mergedProps,
+    required: [],
+  };
+  if (additional !== undefined) {
+    result.additionalProperties = additional;
+  }
+  return result;
+};
+
 const baseTypeForSchema = (schemaObj: JsonSchema, indent: string): string => {
   const schema = deref(schemaObj, new Set());
   if (schema.const !== undefined) {
@@ -149,15 +347,66 @@ const baseTypeForSchema = (schemaObj: JsonSchema, indent: string): string => {
     return `t.enum [ ${values} ]`;
   }
 
-  if (schema.anyOf && Array.isArray(schema.anyOf) && schema.anyOf.length > 0) {
-    const entries = schema.anyOf as JsonSchema[];
-    const parts = entries.map((entry) => `(${typeForSchema(entry, indent)})`).join(" ");
-    return `t.oneOf [ ${parts} ]`;
+  // Carrier used by the merge fallback to smuggle a discriminator through.
+  if ((schema as { _taggedDiscriminator?: Discriminator })._taggedDiscriminator) {
+    return renderTaggedSubmodule(
+      (schema as { _taggedDiscriminator: Discriminator })._taggedDiscriminator,
+      indent,
+    );
   }
 
-  if (schema.oneOf && Array.isArray(schema.oneOf) && schema.oneOf.length > 0) {
-    const entries = schema.oneOf as JsonSchema[];
-    const parts = entries.map((entry) => `(${typeForSchema(entry, indent)})`).join(" ");
+  // Nix's `types.oneOf` picks a variant via each variant's `check` function.
+  // Submodules' `check` is essentially `isAttrs`, so every attrset passes
+  // the first object-variant's check and `oneOf [sub1 sub2 ...]` always
+  // resolves to sub1 regardless of the value's shape. For object branches
+  // we need a discriminator-aware type instead. Primitive branches (str,
+  // int, bool, …) have discriminating checks and work in `oneOf` as-is.
+  const unionBranchesRaw =
+    schema.anyOf && Array.isArray(schema.anyOf) && schema.anyOf.length > 0
+      ? (schema.anyOf as JsonSchema[])
+      : schema.oneOf && Array.isArray(schema.oneOf) && schema.oneOf.length > 0
+        ? (schema.oneOf as JsonSchema[])
+        : null;
+  if (unionBranchesRaw) {
+    const branches = dedupeSchemas(unionBranchesRaw);
+    if (branches.length === 1) {
+      return typeForSchema(branches[0], indent);
+    }
+
+    const objectBranches = branches.filter(isObjectLikeSchema);
+    const primitiveBranches = branches.filter((b) => !isObjectLikeSchema(b));
+
+    if (objectBranches.length === 0) {
+      const parts = primitiveBranches
+        .map((e) => `(${typeForSchema(e, indent)})`)
+        .join(" ");
+      return `t.oneOf [ ${parts} ]`;
+    }
+
+    let objectTypeExpr: string;
+    if (objectBranches.length === 1) {
+      objectTypeExpr = objectTypeForSchema(objectBranches[0], indent);
+    } else {
+      const disc = tryDiscriminator(objectBranches);
+      if (disc) {
+        objectTypeExpr = renderTaggedSubmodule(disc, indent);
+      } else {
+        console.warn(
+          "[generate-config-options] object-only union without a discriminator " +
+            "property; falling back to permissive merged submodule (required-field " +
+            "constraints will be lost for this location).",
+        );
+        objectTypeExpr = objectTypeForSchema(mergeObjectBranches(objectBranches), indent);
+      }
+    }
+
+    if (primitiveBranches.length === 0) {
+      return objectTypeExpr;
+    }
+    const parts = [
+      ...primitiveBranches.map((e) => `(${typeForSchema(e, indent)})`),
+      `(${objectTypeExpr})`,
+    ].join(" ");
     return `t.oneOf [ ${parts} ]`;
   }
 
@@ -260,7 +509,7 @@ const renderOption = (key: string, schemaObj: JsonSchema, required: boolean, ind
     ? `# Generated from upstream OpenClaw schema at rev ${schemaRev}. DO NOT EDIT.`
     : "# Generated from upstream OpenClaw schema. DO NOT EDIT.";
 
-  const output = `${header}\n# Generator: nix/scripts/generate-config-options.ts\n{ lib }:\nlet\n  t = lib.types;\nin\n{\n${body}\n}\n`;
+  const output = `${header}\n# Generator: nix/scripts/generate-config-options.ts\n{ lib }:\nlet\n  t = lib.types;\n  taggedSubmodule = import ./tagged-submodule.nix { inherit lib; };\nin\n{\n${body}\n}\n`;
 
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, output, "utf8");
