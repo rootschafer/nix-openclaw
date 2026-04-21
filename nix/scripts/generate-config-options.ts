@@ -265,6 +265,64 @@ const renderTaggedSubmodule = (disc: Discriminator, indent: string): string => {
   return lines.join("\n");
 };
 
+// Collapse a discriminated union when every variant renders to identical
+// non-discriminator shape. Compares the *rendered* Nix for each variant
+// (minus the discriminator field) rather than the raw JSON-schema hash —
+// Nix types can't express constraints like `pattern`, `minLength`, or
+// `format` on strings, so two variants whose only schema difference is an
+// unrenderable constraint still emit byte-identical Nix and should
+// collapse. The resulting submodule accepts the union of per-variant
+// discriminator consts as an enum on that one field; everything else is
+// shared, so it renders as a plain `t.submodule` instead of a
+// `taggedSubmodule` with N copies of the same options. Returns null when
+// the variants diverge in anything the Nix renderer actually cares about,
+// which is exactly when `taggedSubmodule` is needed for correctness.
+const tryCollapseFlatDiscriminator = (disc: Discriminator, indent: string): JsonSchema | null => {
+  const { discriminator, variants } = disc;
+  // Match the indent `renderTaggedSubmodule` would use for option bodies so
+  // rendered-string comparison reflects what we'd actually emit.
+  const optionIndent = `${indent}      `;
+  type Stripped = { schema: JsonSchema; rendered: string; discRequired: boolean };
+  const stripped: Stripped[] = variants.map(({ schema }) => {
+    const props = { ...((schema.properties as Record<string, JsonSchema>) || {}) };
+    delete props[discriminator];
+    const requiredRaw = (schema.required as string[]) || [];
+    const discRequired = requiredRaw.includes(discriminator);
+    const required = requiredRaw.filter((r) => r !== discriminator).sort();
+    const strippedSchema: JsonSchema = { ...schema, properties: props, required };
+    return {
+      schema: strippedSchema,
+      rendered: renderVariantOptions(strippedSchema, optionIndent),
+      discRequired,
+    };
+  });
+
+  if (!stripped.every((s) => s.rendered === stripped[0].rendered)) return null;
+  if (!stripped.every((s) => s.discRequired === stripped[0].discRequired)) return null;
+
+  const sortedTags = variants.map((v) => v.tag).slice().sort();
+  const templateSchema = stripped[0].schema;
+  const templateProps = {
+    ...((templateSchema.properties as Record<string, JsonSchema>) || {}),
+    [discriminator]: { enum: sortedTags },
+  };
+  const baseRequired = (templateSchema.required as string[]) || [];
+  const requiredOut = stripped[0].discRequired
+    ? [...baseRequired, discriminator].sort()
+    : baseRequired;
+  return {
+    ...templateSchema,
+    properties: templateProps,
+    required: requiredOut,
+  };
+};
+
+const renderDiscriminated = (disc: Discriminator, indent: string): string => {
+  const collapsed = tryCollapseFlatDiscriminator(disc, indent);
+  if (collapsed) return objectTypeForSchema(collapsed, indent);
+  return renderTaggedSubmodule(disc, indent);
+};
+
 // Last-resort fallback for object-only unions where no discriminator can be
 // identified. Merges all branches into a single permissive submodule.
 // Loses required-field constraints — prefer fixing the upstream schema to
@@ -349,7 +407,7 @@ const baseTypeForSchema = (schemaObj: JsonSchema, indent: string): string => {
 
   // Carrier used by the merge fallback to smuggle a discriminator through.
   if ((schema as { _taggedDiscriminator?: Discriminator })._taggedDiscriminator) {
-    return renderTaggedSubmodule(
+    return renderDiscriminated(
       (schema as { _taggedDiscriminator: Discriminator })._taggedDiscriminator,
       indent,
     );
@@ -389,7 +447,7 @@ const baseTypeForSchema = (schemaObj: JsonSchema, indent: string): string => {
     } else {
       const disc = tryDiscriminator(objectBranches);
       if (disc) {
-        objectTypeExpr = renderTaggedSubmodule(disc, indent);
+        objectTypeExpr = renderDiscriminated(disc, indent);
       } else {
         console.warn(
           "[generate-config-options] object-only union without a discriminator " +
