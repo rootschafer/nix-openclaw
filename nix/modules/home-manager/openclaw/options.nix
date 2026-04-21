@@ -9,82 +9,6 @@ let
   openclawLib = import ./lib.nix { inherit config lib pkgs; };
   instanceModule = import ./options-instance.nix { inherit lib openclawLib; };
   pluginCatalog = import ./plugin-catalog.nix;
-  authProfileSecretRefModule = lib.types.submodule {
-    options = {
-      source = lib.mkOption {
-        type = lib.types.enum [
-          "file"
-          "exec"
-          "env"
-        ];
-        description = "SecretRef source kind for this credential.";
-      };
-
-      provider = lib.mkOption {
-        type = lib.types.str;
-        description = "Configured OpenClaw secret provider alias to resolve against.";
-      };
-
-      id = lib.mkOption {
-        type = lib.types.str;
-        description = "Secret id within the selected provider.";
-      };
-    };
-  };
-
-  authProfileModule = lib.types.submodule {
-    options = {
-      agents = lib.mkOption {
-        type = lib.types.either (lib.types.enum [ "all" ]) (lib.types.listOf lib.types.str);
-        default = "all";
-        description = "Which agents should receive this auth profile. Use \"all\" or a list like [ \"coder\" \"main\" ].";
-      };
-
-      type = lib.mkOption {
-        type = lib.types.enum [
-          "api_key"
-          "token"
-        ];
-        description = "Credential type stored in auth-profiles.json.";
-      };
-
-      provider = lib.mkOption {
-        type = lib.types.str;
-        description = "OpenClaw provider id, for example openrouter or openai.";
-      };
-
-      key = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Plaintext API key. Mutually exclusive with keyRef. Usually not recommended.";
-      };
-
-      keyRef = lib.mkOption {
-        type = lib.types.nullOr authProfileSecretRefModule;
-        default = null;
-        description = "SecretRef for API key profiles.";
-      };
-
-      token = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Plaintext token. Mutually exclusive with tokenRef. Usually not recommended.";
-      };
-
-      tokenRef = lib.mkOption {
-        type = lib.types.nullOr authProfileSecretRefModule;
-        default = null;
-        description = "SecretRef for token profiles.";
-      };
-
-      expires = lib.mkOption {
-        type = lib.types.nullOr lib.types.int;
-        default = null;
-        description = "Optional expiry timestamp in milliseconds since epoch.";
-      };
-    };
-  };
-
   mkSkillOption = lib.types.submodule {
     options = {
       name = lib.mkOption {
@@ -262,32 +186,6 @@ in
       type = lib.types.attrsOf (lib.types.submodule instanceModule);
       default = { };
       description = "Named OpenClaw instances (prod/test).";
-    };
-
-    authProfiles = lib.mkOption {
-      type = lib.types.attrsOf authProfileModule;
-      default = { };
-      example = lib.literalExpression ''
-        {
-          "openrouter:default" = {
-            agents = "all";
-            type = "api_key";
-            provider = "openrouter";
-            keyRef = {
-              source = "file";
-              provider = "openrouter_key_provider";
-              id = "default";
-            };
-          };
-        }
-      '';
-      description = ''
-        Declarative auth profiles written to ~/.openclaw/agents/<agent>/agent/auth-profiles.json.
-
-        Each profile can target all agents or a selected subset via the `agents` field.
-        This is opt-in and intended primarily for API-key or token-based auth.
-        OAuth-style runtime-managed credentials should usually remain unmanaged.
-      '';
     };
 
     exposePluginPackages = lib.mkOption {
