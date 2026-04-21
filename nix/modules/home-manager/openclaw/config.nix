@@ -65,6 +65,88 @@ let
       ;
   };
 
+  profileTargetsAgent =
+    agentId: profile:
+    profile.agents == "all" || builtins.elem agentId profile.agents;
+
+  renderAuthProfile =
+    profile:
+    lib.filterAttrs (_: v: v != null) {
+      type = profile.type;
+      provider = profile.provider;
+      key = profile.key;
+      keyRef = profile.keyRef;
+      token = profile.token;
+      tokenRef = profile.tokenRef;
+      expires = profile.expires;
+    };
+
+  authProfilesForAgent =
+    agentId:
+    lib.mapAttrs' (
+      profileId: profile:
+      lib.nameValuePair profileId (renderAuthProfile profile)
+    ) (lib.filterAttrs (_: profile: profileTargetsAgent agentId profile) cfg.authProfiles);
+
+  authProfileFileFor =
+    agentId:
+    let
+      renderedProfiles = authProfilesForAgent agentId;
+      authJson = builtins.toJSON {
+        version = 1;
+        profiles = renderedProfiles;
+      };
+    in
+    {
+      name = ".openclaw/agents/${agentId}/agent/auth-profiles.json";
+      value = {
+        text = authJson;
+      };
+    };
+
+  targetedAgents = lib.unique (
+    lib.concatMap (
+      profile:
+      if profile.agents == "all" then
+        [ ]
+      else
+        profile.agents
+    ) (lib.attrValues cfg.authProfiles)
+  );
+
+  allConfiguredAgentIds = map (agent: agent.id) (((cfg.config.agents or { }).list or [ ]));
+
+  authProfileAgentIds =
+    if cfg.authProfiles == { } then
+      [ ]
+    else if lib.any (profile: profile.agents == "all") (lib.attrValues cfg.authProfiles) then
+      allConfiguredAgentIds
+    else
+      targetedAgents;
+
+  authProfileFiles = lib.listToAttrs (map authProfileFileFor authProfileAgentIds);
+
+  authProfileAssertions =
+    lib.mapAttrsToList (
+      profileId: profile:
+      let
+        hasKey = profile.key != null;
+        hasKeyRef = profile.keyRef != null;
+        hasToken = profile.token != null;
+        hasTokenRef = profile.tokenRef != null;
+        agentList = if profile.agents == "all" then [ ] else profile.agents;
+      in
+      {
+        assertion =
+          (if profile.type == "api_key" then (hasKey || hasKeyRef) && !(hasToken || hasTokenRef) else true)
+          && (if profile.type == "token" then (hasToken || hasTokenRef) && !(hasKey || hasKeyRef) else true)
+          && !(hasKey && hasKeyRef)
+          && !(hasToken && hasTokenRef)
+          && (profile.agents == "all" || agentList != [ ]);
+        message = "Invalid programs.openclaw.authProfiles.${lib.escapeNixIdentifier profileId}: set exactly one of key/keyRef for api_key profiles or token/tokenRef for token profiles, and provide either agents = \"all\" or a non-empty agent list.";
+      }
+    ) cfg.authProfiles;
+
   stripNulls =
     value:
     if value == null then
@@ -258,7 +340,8 @@ in
     ++ files.documentsAssertions
     ++ files.skillAssertions
     ++ plugins.pluginAssertions
-    ++ plugins.pluginSkillAssertions;
+    ++ plugins.pluginSkillAssertions
+    ++ authProfileAssertions;
 
     home.packages = lib.unique (
       (map (item: item.package) instanceConfigs)
@@ -278,6 +361,7 @@ in
       files.documentsFiles
       files.skillFiles
       plugins.pluginConfigFiles
+      authProfileFiles
       (lib.optionalAttrs cfg.reloadScript.enable {
         ".local/bin/openclaw-reload" = {
           executable = true;
