@@ -22,7 +22,7 @@ let
       cfg.package;
   appPackage = if cfg.appPackage != null then cfg.appPackage else defaultPackage;
   generatedConfigOptions = import ../../../generated/openclaw-config-options.nix { lib = lib; };
-  pluginCatalog = import ./plugin-catalog.nix;
+  pluginCatalog = import ./plugin-catalog.nix { inherit (pkgs) stdenv; };
 
   bundledPluginSources =
     let

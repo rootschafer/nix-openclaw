@@ -18,7 +18,7 @@
 }:
 
 let
-  pluginCatalog = import ../modules/home-manager/openclaw/plugin-catalog.nix;
+  pluginCatalog = import ../modules/home-manager/openclaw/plugin-catalog.nix { inherit stdenv; };
   linuxBundledPlugins = builtins.attrNames (lib.filterAttrs (_: plugin: plugin.linux or false) pluginCatalog);
   enableBundledPlugin = name: stdenv.hostPlatform.isDarwin || lib.elem name linuxBundledPlugins;
 
