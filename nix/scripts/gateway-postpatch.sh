@@ -4,6 +4,20 @@ if [ -f package.json ]; then
   "$REMOVE_PACKAGE_MANAGER_FIELD_SH" package.json
 fi
 
+# fetchFromGitHub strips the .git/ directory, so isSourceCheckoutRoot() in
+# src/plugins/bundled-dir.ts returns false in the build sandbox. Without a
+# source-checkout marker, resolveBundledPluginsDir() ignores the gateway
+# suite's "no bundled extensions" override (a non-existent path under HOME)
+# and walks back to dist/extensions/. Loading the bedrock plugin from there
+# triggers ensureBundledPluginRuntimeDeps() → spawnSync('npm','install',
+# '@aws-sdk/client-bedrock-runtime', …) which hangs forever in the network-
+# less sandbox. A bare .git marker file is enough for isSourceCheckoutRoot()
+# (it accepts a regular file, see findGitRoot in src/infra/git-root.ts) and
+# restores the suite-author's intent without re-enabling bundled discovery.
+if [ ! -e .git ]; then
+  : > .git
+fi
+
 if [ -n "${PATCH_BUNDLED_RUNTIME_DEPS_SCRIPT:-}" ] && [ -f scripts/stage-bundled-plugin-runtime-deps.mjs ]; then
   cp "$PATCH_BUNDLED_RUNTIME_DEPS_SCRIPT" scripts/stage-bundled-plugin-runtime-deps.mjs
   chmod u+w scripts/stage-bundled-plugin-runtime-deps.mjs
