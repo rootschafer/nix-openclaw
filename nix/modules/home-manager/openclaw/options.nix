@@ -8,7 +8,7 @@
 let
   openclawLib = import ./lib.nix { inherit config lib pkgs; };
   instanceModule = import ./options-instance.nix { inherit lib openclawLib; };
-  pluginCatalog = import ./plugin-catalog.nix;
+  pluginCatalog = import ./plugin-catalog.nix { inherit (pkgs) stdenv; };
   mkSkillOption = lib.types.submodule {
     options = {
       name = lib.mkOption {

@@ -36,7 +36,7 @@ let
     "ripgrep"
   ];
 
-  pluginCatalog = import ../modules/home-manager/openclaw/plugin-catalog.nix;
+  pluginCatalog = import ../modules/home-manager/openclaw/plugin-catalog.nix { inherit (pkgs) stdenv; };
   bundledToolNames = lib.unique (map (plugin: plugin.tool) (builtins.attrValues pluginCatalog));
 
   extraNames = [

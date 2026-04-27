@@ -1,3 +1,4 @@
+{ stdenv }:
 {
   summarize = {
     tool = "summarize";
@@ -38,7 +39,7 @@
   goplaces = {
     tool = "goplaces";
     description = "Google Places API (New) CLI";
-    defaultEnable = true;
+    defaultEnable = stdenv.hostPlatform.system != "x86_64-darwin";
     linux = true;
   };
 
