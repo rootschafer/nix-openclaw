@@ -26,16 +26,18 @@ if (fs.existsSync(legacyValidationPath)) {
   const legacyModule = await import(moduleUrl);
   validateConfigObject = legacyModule.validateConfigObject;
 } else if (fs.existsSync(distDir)) {
+  // Pre v2026.4.25 the validator lived in dist/config-*.js. v2026.4.26 moved it
+  // into dist/io-*.js (re-exported via minified aliases like
+  // `validateConfigObjectWithPlugins as D`). Scan every top-level .js file
+  // that mentions the symbol so we don't have to chase rename churn.
   const candidates = fs.readdirSync(distDir)
-    .filter((name) => name.startsWith("config-") && name.endsWith(".js"));
+    .filter((name) => name.endsWith(".js"));
 
   for (const candidate of candidates) {
     const candidatePath = path.join(distDir, candidate);
     const contents = fs.readFileSync(candidatePath, "utf8");
 
-    // Newer gateway bundles often only export validateConfigObjectWithPlugins (aliased),
-    // while still containing an internal validateConfigObject function.
-    if (!contents.includes("validateConfigObject") && !contents.includes("validateConfigObjectWithPlugins")) {
+    if (!contents.includes("validateConfigObject")) {
       continue;
     }
 

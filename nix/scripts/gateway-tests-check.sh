@@ -38,9 +38,13 @@ if [ -z "${vitest_cli:-}" ] || [ ! -f "$vitest_cli" ]; then
   exit 1
 fi
 
-# Bound every hook and test individually so a hung suite can't stall the whole run.
+# Generous timeouts for sandbox CPU contention: a handful of upstream tests
+# legitimately take 30-50s here while finishing in 1-3s on a warm host.
+# `--retry=2` handles the occasional one that still slips past the timeout
+# under heavy parallel load instead of failing the whole CI run.
 exec node "$vitest_cli" run \
   --config "$vitest_config" \
-  --testTimeout=20000 \
-  --hookTimeout=60000 \
-  --teardownTimeout=20000
+  --testTimeout=120000 \
+  --hookTimeout=120000 \
+  --teardownTimeout=20000 \
+  --retry=2

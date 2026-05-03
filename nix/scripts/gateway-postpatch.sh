@@ -11,11 +11,15 @@ fi
 # and walks back to dist/extensions/. Loading the bedrock plugin from there
 # triggers ensureBundledPluginRuntimeDeps() → spawnSync('npm','install',
 # '@aws-sdk/client-bedrock-runtime', …) which hangs forever in the network-
-# less sandbox. A bare .git marker file is enough for isSourceCheckoutRoot()
-# (it accepts a regular file, see findGitRoot in src/infra/git-root.ts) and
-# restores the suite-author's intent without re-enabling bundled discovery.
+# less sandbox.
+#
+# A real directory (not a file) is required: openclaw's
+# scripts/lib/local-heavy-check-runtime.mjs does mkdirSync('.git/openclaw-
+# local-checks') during build:plugin-sdk:dts and crashes with ENOTDIR if
+# .git is a regular file. isSourceCheckoutRoot() accepts either form, so a
+# directory is strictly safer.
 if [ ! -e .git ]; then
-  : > .git
+  mkdir -p .git
 fi
 
 if [ -n "${PATCH_BUNDLED_RUNTIME_DEPS_SCRIPT:-}" ] && [ -f scripts/stage-bundled-plugin-runtime-deps.mjs ]; then
@@ -46,7 +50,7 @@ if [ -f src/agents/shell-utils.ts ]; then
         next;
       }
       { print }
-    ' src/agents/shell-utils.ts > src/agents/shell-utils.ts.next
+    ' src/agents/shell-utils.ts >src/agents/shell-utils.ts.next
     mv src/agents/shell-utils.ts.next src/agents/shell-utils.ts
   fi
 fi
