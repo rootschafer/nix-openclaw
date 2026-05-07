@@ -65,8 +65,7 @@ unpacked_zip_hash() {
   local url="$1"
   local archive_path unpack_dir
 
-  archive_path=$(nix-prefetch-url "$url" | tail -n 1)
-  archive_path="/nix/store/${archive_path}-$(basename "$url")"
+  archive_path=$(nix-prefetch-url --print-path "$url" | tail -n 1)
   unpack_dir=$(mktemp -d)
   unzip -q "$archive_path" -d "$unpack_dir"
   nix hash path "$unpack_dir"
@@ -233,30 +232,30 @@ apply_release() {
 
 mode="${1:-}"
 case "$mode" in
-  select)
-    if [[ $# -ne 1 ]]; then
-      usage
-      exit 1
-    fi
-    require_cmd jq
-    require_cmd gh
-    select_release
-    ;;
-  apply)
-    if [[ $# -ne 4 ]]; then
-      usage
-      exit 1
-    fi
-    require_cmd jq
-    require_cmd gh
-    require_cmd nix
-    require_cmd perl
-    require_cmd nix-prefetch-url
-    require_cmd unzip
-    apply_release "$2" "$3" "$4"
-    ;;
-  *)
+select)
+  if [[ $# -ne 1 ]]; then
     usage
     exit 1
-    ;;
+  fi
+  require_cmd jq
+  require_cmd gh
+  select_release
+  ;;
+apply)
+  if [[ $# -ne 4 ]]; then
+    usage
+    exit 1
+  fi
+  require_cmd jq
+  require_cmd gh
+  require_cmd nix
+  require_cmd perl
+  require_cmd nix-prefetch-url
+  require_cmd unzip
+  apply_release "$2" "$3" "$4"
+  ;;
+*)
+  usage
+  exit 1
+  ;;
 esac
