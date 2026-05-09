@@ -27,6 +27,22 @@ if [ -n "${PATCH_BUNDLED_RUNTIME_DEPS_SCRIPT:-}" ] && [ -f scripts/stage-bundled
   chmod u+w scripts/stage-bundled-plugin-runtime-deps.mjs
 fi
 
+# NixOS stores auto-deduplicate identical files via hardlinks (nlink > 1).
+# Several v2026.5.2 bundled-plugin readers set rejectHardlinks: true when
+# loading their own artifacts out of dist/extensions/, which then fails
+# every read on a deduped store and aborts config validation. The guard
+# exists to defeat attacker-planted hardlinks in writable directories;
+# the bundled dist tree is immutable under /nix/store, so disable the
+# check at just these call sites and leave the rest of rejectHardlinks
+# (and the tests covering it) untouched.
+for hardlink_caller in src/plugins/public-surface-loader.ts \
+                       src/plugins/bundle-lsp.ts \
+                       src/plugins/bundle-commands.ts; do
+  if [ -f "$hardlink_caller" ] && grep -q 'rejectHardlinks: true' "$hardlink_caller"; then
+    sed -i 's/rejectHardlinks: true/rejectHardlinks: false/g' "$hardlink_caller"
+  fi
+done
+
 if [ -f src/logging/logger.ts ]; then
   if ! grep -q "OPENCLAW_LOG_DIR" src/logging/logger.ts; then
     sed -i 's/export const DEFAULT_LOG_DIR = "\/tmp\/openclaw";/export const DEFAULT_LOG_DIR = process.env.OPENCLAW_LOG_DIR ?? "\/tmp\/openclaw";/' src/logging/logger.ts
