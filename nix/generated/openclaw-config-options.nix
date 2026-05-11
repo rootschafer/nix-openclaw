@@ -1,4 +1,4 @@
-# Generated from upstream OpenClaw schema at rev 8b2a6e57fef6c582ec6d27b85150616f9e3a7ba4. DO NOT EDIT.
+# Generated from upstream OpenClaw schema at rev eeef4864494f859838fec1586bedbab1f8fa5702. DO NOT EDIT.
 # Generator: nix/scripts/generate-config-options.ts
 { lib }:
 let
@@ -134,10 +134,6 @@ in
       type = t.nullOr (t.submodule { options = {
       agentRuntime = lib.mkOption {
         type = t.nullOr (t.submodule { options = {
-        fallback = lib.mkOption {
-          type = t.nullOr (t.enum [ "pi" "none" ]);
-          default = null;
-        };
         id = lib.mkOption {
           type = t.nullOr (t.str);
           default = null;
@@ -607,10 +603,6 @@ in
       };
       embeddedHarness = lib.mkOption {
         type = t.nullOr (t.submodule { options = {
-        fallback = lib.mkOption {
-          type = t.nullOr (t.enum [ "pi" "none" ]);
-          default = null;
-        };
         runtime = lib.mkOption {
           type = t.nullOr (t.str);
           default = null;
@@ -1682,6 +1674,10 @@ in
         type = t.nullOr (t.int);
         default = null;
       };
+      toolProgressDetail = lib.mkOption {
+        type = t.nullOr (t.oneOf [ (t.enum [ "explain" ]) (t.enum [ "raw" ]) ]);
+        default = null;
+      };
       typingIntervalSeconds = lib.mkOption {
         type = t.nullOr (t.int);
         default = null;
@@ -1730,10 +1726,6 @@ in
       };
       agentRuntime = lib.mkOption {
         type = t.nullOr (t.submodule { options = {
-        fallback = lib.mkOption {
-          type = t.nullOr (t.enum [ "pi" "none" ]);
-          default = null;
-        };
         id = lib.mkOption {
           type = t.nullOr (t.str);
           default = null;
@@ -1772,10 +1764,6 @@ in
       };
       embeddedHarness = lib.mkOption {
         type = t.nullOr (t.submodule { options = {
-        fallback = lib.mkOption {
-          type = t.nullOr (t.enum [ "pi" "none" ]);
-          default = null;
-        };
         runtime = lib.mkOption {
           type = t.nullOr (t.str);
           default = null;
@@ -1807,7 +1795,7 @@ in
           default = null;
         };
         visibleReplies = lib.mkOption {
-          type = t.nullOr (t.enum [ "automatic" "message_tool" ]);
+          type = t.nullOr (t.oneOf [ (t.enum [ "automatic" "message_tool" ]) (t.bool) ]);
           default = null;
         };
       }; });
@@ -2683,6 +2671,10 @@ in
         type = t.nullOr (t.enum [ "off" "minimal" "low" "medium" "high" "xhigh" "adaptive" "max" ]);
         default = null;
       };
+      toolProgressDetail = lib.mkOption {
+        type = t.nullOr (t.enum [ "explain" "raw" ]);
+        default = null;
+      };
       tools = lib.mkOption {
         type = t.nullOr (t.submodule { options = {
         allow = lib.mkOption {
@@ -2872,6 +2864,15 @@ in
           };
           historySize = lib.mkOption {
             type = t.nullOr (t.int);
+            default = null;
+          };
+          postCompactionGuard = lib.mkOption {
+            type = t.nullOr (t.submodule { options = {
+            windowSize = lib.mkOption {
+              type = t.nullOr (t.int);
+              default = null;
+            };
+          }; });
             default = null;
           };
           unknownToolThreshold = lib.mkOption {
@@ -3082,6 +3083,10 @@ in
           default = null;
         };
       }; });
+        default = null;
+      };
+      verboseDefault = lib.mkOption {
+        type = t.nullOr (t.enum [ "off" "on" "full" ]);
         default = null;
       };
       workspace = lib.mkOption {
@@ -3595,7 +3600,42 @@ in
   };
 
   channels = lib.mkOption {
-    type = t.nullOr (t.anything);
+    type = t.nullOr (t.submodule { options = {
+    defaults = lib.mkOption {
+      type = t.nullOr (t.submodule { options = {
+      contextVisibility = lib.mkOption {
+        type = t.nullOr (t.enum [ "all" "allowlist" "allowlist_quote" ]);
+        default = null;
+      };
+      groupPolicy = lib.mkOption {
+        type = t.nullOr (t.enum [ "open" "disabled" "allowlist" ]);
+        default = null;
+      };
+      heartbeat = lib.mkOption {
+        type = t.nullOr (t.submodule { options = {
+        showAlerts = lib.mkOption {
+          type = t.nullOr (t.bool);
+          default = null;
+        };
+        showOk = lib.mkOption {
+          type = t.nullOr (t.bool);
+          default = null;
+        };
+        useIndicator = lib.mkOption {
+          type = t.nullOr (t.bool);
+          default = null;
+        };
+      }; });
+        default = null;
+      };
+    }; });
+      default = null;
+    };
+    modelByChannel = lib.mkOption {
+      type = t.nullOr (t.attrsOf (t.attrsOf (t.str)));
+      default = null;
+    };
+  }; });
     default = null;
   };
 
@@ -5237,7 +5277,7 @@ in
         default = null;
       };
       visibleReplies = lib.mkOption {
-        type = t.nullOr (t.enum [ "automatic" "message_tool" ]);
+        type = t.nullOr (t.oneOf [ (t.enum [ "automatic" "message_tool" ]) (t.bool) ]);
         default = null;
       };
     }; });
@@ -5588,7 +5628,7 @@ in
       default = null;
     };
     visibleReplies = lib.mkOption {
-      type = t.nullOr (t.enum [ "automatic" "message_tool" ]);
+      type = t.nullOr (t.oneOf [ (t.enum [ "automatic" "message_tool" ]) (t.bool) ]);
       default = null;
     };
   }; });
@@ -6216,6 +6256,10 @@ in
       type = t.nullOr (t.listOf (t.str));
       default = null;
     };
+    bundledDiscovery = lib.mkOption {
+      type = t.nullOr (t.enum [ "compat" "allowlist" ]);
+      default = null;
+    };
     deny = lib.mkOption {
       type = t.nullOr (t.listOf (t.str));
       default = null;
@@ -6242,6 +6286,14 @@ in
         };
         allowPromptInjection = lib.mkOption {
           type = t.nullOr (t.bool);
+          default = null;
+        };
+        timeoutMs = lib.mkOption {
+          type = t.nullOr (t.int);
+          default = null;
+        };
+        timeouts = lib.mkOption {
+          type = t.nullOr (t.attrsOf (t.int));
           default = null;
         };
       }; });
@@ -7158,6 +7210,15 @@ in
       };
       historySize = lib.mkOption {
         type = t.nullOr (t.int);
+        default = null;
+      };
+      postCompactionGuard = lib.mkOption {
+        type = t.nullOr (t.submodule { options = {
+        windowSize = lib.mkOption {
+          type = t.nullOr (t.int);
+          default = null;
+        };
+      }; });
         default = null;
       };
       unknownToolThreshold = lib.mkOption {
@@ -10242,6 +10303,10 @@ in
         };
         timeoutSeconds = lib.mkOption {
           type = t.nullOr (t.int);
+          default = null;
+        };
+        useTrustedEnvProxy = lib.mkOption {
+          type = t.nullOr (t.bool);
           default = null;
         };
         userAgent = lib.mkOption {

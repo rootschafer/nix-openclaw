@@ -37,7 +37,10 @@ fi
 # (and the tests covering it) untouched.
 for hardlink_caller in src/plugins/public-surface-loader.ts \
                        src/plugins/bundle-lsp.ts \
-                       src/plugins/bundle-commands.ts; do
+                       src/plugins/bundle-commands.ts \
+                       src/plugins/bundle-config-shared.ts \
+                       src/plugins/bundle-mcp.ts \
+                       src/plugins/install.ts; do
   if [ -f "$hardlink_caller" ] && grep -q 'rejectHardlinks: true' "$hardlink_caller"; then
     sed -i 's/rejectHardlinks: true/rejectHardlinks: false/g' "$hardlink_caller"
   fi

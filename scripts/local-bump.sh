@@ -99,6 +99,7 @@ if $skip_validate; then
 fi
 
 # ---- validate (yolo-update.yml: jobs.validate-{linux,macos}.steps[*]) --
+echo "Attempting to run checks..."
 case "$target_system" in
 x86_64-linux | aarch64-linux)
   scripts/check-flake-lock-owners.sh

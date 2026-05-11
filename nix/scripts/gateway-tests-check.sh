@@ -21,6 +21,8 @@ export VITEST_POOL="forks"
 export VITEST_MIN_WORKERS="2"
 export VITEST_MAX_WORKERS="2"
 
+export FORCE_COLOR=0
+
 PATH="$PWD/node_modules/.bin:$PATH"
 
 vitest_config="vitest.gateway.config.ts"
