@@ -505,6 +505,28 @@ const baseTypeForSchema = (schemaObj: JsonSchema, indent: string): string => {
   }
 };
 
+// If an object's `additionalProperties` allows unknown keys, return the Nix
+// type that each undeclared key's value should match. Otherwise return null,
+// meaning the submodule should remain strict.
+//
+// JSON Schema → Nix mapping:
+//   false / absent       → null   (strict; typos rejected)
+//   true                 → t.anything
+//   {} (empty schema)    → t.anything  (zod .passthrough() emits this)
+//   non-empty subschema  → typeForSchema(subschema)
+const freeformTypeForAdditional = (
+  additional: unknown,
+  indent: string,
+): string | null => {
+  if (additional === true) return "t.anything";
+  if (additional && typeof additional === "object") {
+    const obj = additional as JsonSchema;
+    if (Object.keys(obj).length === 0) return "t.anything";
+    return typeForSchema(obj, indent);
+  }
+  return null;
+};
+
 const objectTypeForSchema = (schema: JsonSchema, indent: string): string => {
   const properties = (schema.properties as Record<string, JsonSchema>) || {};
   const requiredList = new Set((schema.required as string[]) || []);
@@ -527,6 +549,14 @@ const objectTypeForSchema = (schema: JsonSchema, indent: string): string => {
     .map((key) => renderOption(key, properties[key], requiredList.has(key), nextIndent))
     .join("\n");
 
+  // Known fields stay strictly typed via `options = {...}`. When the upstream
+  // zod schema is open-ended (e.g. `.passthrough()` for plugin-defined keys),
+  // attach a `freeformType` so undeclared keys are accepted at their declared
+  // value type without forcing every value through `t.attrs`/`t.anything`.
+  const freeform = freeformTypeForAdditional(schema.additionalProperties, nextIndent);
+  if (freeform !== null) {
+    return `t.submodule { freeformType = ${freeform}; options = {\n${inner}\n${indent}}; }`;
+  }
   return `t.submodule { options = {\n${inner}\n${indent}}; }`;
 };
 

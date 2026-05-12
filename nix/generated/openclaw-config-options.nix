@@ -3026,7 +3026,7 @@ in
             default = null;
           };
           providers = lib.mkOption {
-            type = t.nullOr (t.attrsOf (t.submodule { options = {
+            type = t.nullOr (t.attrsOf (t.submodule { freeformType = t.nullOr (t.oneOf [ (t.str) (t.number) (t.bool) (t.listOf (t.anything)) (t.attrsOf (t.anything)) ]); options = {
             apiKey = lib.mkOption {
               type = t.nullOr (t.oneOf [ (t.str) (t.submodule { options = {
               id = lib.mkOption {
@@ -3056,7 +3056,7 @@ in
           default = null;
         };
         providers = lib.mkOption {
-          type = t.nullOr (t.attrsOf (t.submodule { options = {
+          type = t.nullOr (t.attrsOf (t.submodule { freeformType = t.nullOr (t.oneOf [ (t.str) (t.number) (t.bool) (t.listOf (t.anything)) (t.attrsOf (t.anything)) ]); options = {
           apiKey = lib.mkOption {
             type = t.nullOr (t.oneOf [ (t.str) (t.submodule { options = {
             id = lib.mkOption {
@@ -3407,7 +3407,7 @@ in
   };
 
   broadcast = lib.mkOption {
-    type = t.nullOr (t.submodule { options = {
+    type = t.nullOr (t.submodule { freeformType = t.listOf (t.str); options = {
     strategy = lib.mkOption {
       type = t.nullOr (t.enum [ "parallel" "sequential" ]);
       default = null;
@@ -3600,7 +3600,7 @@ in
   };
 
   channels = lib.mkOption {
-    type = t.nullOr (t.submodule { options = {
+    type = t.nullOr (t.submodule { freeformType = t.anything; options = {
     defaults = lib.mkOption {
       type = t.nullOr (t.submodule { options = {
       contextVisibility = lib.mkOption {
@@ -4035,7 +4035,7 @@ in
   };
 
   env = lib.mkOption {
-    type = t.nullOr (t.submodule { options = {
+    type = t.nullOr (t.submodule { freeformType = t.str; options = {
     shellEnv = lib.mkOption {
       type = t.nullOr (t.submodule { options = {
       enabled = lib.mkOption {
@@ -4699,7 +4699,7 @@ in
         default = null;
       };
       entries = lib.mkOption {
-        type = t.nullOr (t.attrsOf (t.submodule { options = {
+        type = t.nullOr (t.attrsOf (t.submodule { freeformType = t.anything; options = {
         enabled = lib.mkOption {
           type = t.nullOr (t.bool);
           default = null;
@@ -5009,7 +5009,7 @@ in
   mcp = lib.mkOption {
     type = t.nullOr (t.submodule { options = {
     servers = lib.mkOption {
-      type = t.nullOr (t.attrsOf (t.submodule { options = {
+      type = t.nullOr (t.attrsOf (t.submodule { freeformType = t.anything; options = {
       args = lib.mkOption {
         type = t.nullOr (t.listOf (t.str));
         default = null;
@@ -5568,7 +5568,7 @@ in
           default = null;
         };
         providers = lib.mkOption {
-          type = t.nullOr (t.attrsOf (t.submodule { options = {
+          type = t.nullOr (t.attrsOf (t.submodule { freeformType = t.nullOr (t.oneOf [ (t.str) (t.number) (t.bool) (t.listOf (t.anything)) (t.attrsOf (t.anything)) ]); options = {
           apiKey = lib.mkOption {
             type = t.nullOr (t.oneOf [ (t.str) (t.submodule { options = {
             id = lib.mkOption {
@@ -5598,7 +5598,7 @@ in
         default = null;
       };
       providers = lib.mkOption {
-        type = t.nullOr (t.attrsOf (t.submodule { options = {
+        type = t.nullOr (t.attrsOf (t.submodule { freeformType = t.nullOr (t.oneOf [ (t.str) (t.number) (t.bool) (t.listOf (t.anything)) (t.attrsOf (t.anything)) ]); options = {
         apiKey = lib.mkOption {
           type = t.nullOr (t.oneOf [ (t.str) (t.submodule { options = {
           id = lib.mkOption {
@@ -6898,7 +6898,7 @@ in
       default = null;
     };
     providers = lib.mkOption {
-      type = t.nullOr (t.attrsOf (t.submodule { options = {
+      type = t.nullOr (t.attrsOf (t.submodule { freeformType = t.anything; options = {
       apiKey = lib.mkOption {
         type = t.nullOr (t.oneOf [ (t.str) (t.submodule { options = {
         id = lib.mkOption {
