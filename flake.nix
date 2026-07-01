@@ -48,6 +48,7 @@
       systems = [
         "x86_64-linux"
         "aarch64-darwin"
+        "x86_64-darwin"
       ];
     in
     flake-utils.lib.eachSystem systems (
@@ -61,7 +62,10 @@
         qmdPkgs = qmdPkgsFor system;
         qmdPackage =
           if pkgs.stdenv.hostPlatform.isDarwin then
-            openclawToolPkgs.qmd or null
+            # Prefer the nix-openclaw-tools qmd build on Darwin, but fall back
+            # to the standalone qmd flake where the tools flake has no build
+            # for this system (e.g. x86_64-darwin has no tools outputs).
+            openclawToolPkgs.qmd or qmdPkgs.qmd or qmdPkgs.default or null
           else
             qmdPkgs.qmd or qmdPkgs.default or null;
         packageSetStable = import ./nix/packages {

@@ -54,7 +54,16 @@ done
 if [[ -z "$target_system" ]]; then
   case "$(uname -s)" in
   Linux) target_system="x86_64-linux" ;;
-  Darwin) target_system="aarch64-darwin" ;;
+  Darwin)
+    case "$(uname -m)" in
+    arm64 | aarch64) target_system="aarch64-darwin" ;;
+    x86_64) target_system="x86_64-darwin" ;;
+    *)
+      echo "Unsupported macOS arch: $(uname -m)" >&2
+      exit 1
+      ;;
+    esac
+    ;;
   *)
     echo "Unsupported host: $(uname -s)" >&2
     exit 1

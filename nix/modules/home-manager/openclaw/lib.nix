@@ -36,13 +36,28 @@ let
     in
     lib.mapAttrs (_name: plugin: plugin.source or (openclawTools plugin.tool)) pluginCatalog;
 
+  # A bundled tool plugin is only usable where nix-openclaw-tools actually
+  # ships a build for the host system (e.g. the tools flake has no
+  # x86_64-darwin outputs, so its `openclawPlugin system` returns null there).
+  # Skip such plugins the same way `tools/extended.nix` drops unavailable
+  # tools, rather than letting plugins.nix hard-throw "openclawPlugin is null"
+  # and break every default config on that platform.
+  bundledPluginAvailableForHost =
+    source:
+    let
+      flake = builtins.getFlake source;
+      raw = flake.openclawPlugin or null;
+      resolved = if builtins.isFunction raw then raw pkgs.stdenv.hostPlatform.system else raw;
+    in
+    resolved != null;
+
   bundledPlugins = lib.filter (p: p != null) (
     lib.mapAttrsToList (
       name: source:
       let
         pluginCfg = cfg.bundledPlugins.${name};
       in
-      if (pluginCfg.enable or false) then
+      if (pluginCfg.enable or false) && bundledPluginAvailableForHost source then
         {
           inherit source;
           config = pluginCfg.config or { };
