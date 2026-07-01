@@ -36,20 +36,23 @@ let
     in
     lib.mapAttrs (_name: plugin: plugin.source or (openclawTools plugin.tool)) pluginCatalog;
 
-  # A bundled tool plugin is only usable where nix-openclaw-tools actually
-  # ships a build for the host system (e.g. the tools flake has no
-  # x86_64-darwin outputs, so its `openclawPlugin system` returns null there).
-  # Skip such plugins the same way `tools/extended.nix` drops unavailable
-  # tools, rather than letting plugins.nix hard-throw "openclawPlugin is null"
-  # and break every default config on that platform.
+  # nix-openclaw-tools publishes builds for every common system except
+  # x86_64-darwin, so its tool-backed bundled plugins (goplaces, gogcli, …)
+  # cannot be enabled on an Intel Mac. Skip them there rather than letting
+  # plugins.nix getFlake + hard-throw "openclawPlugin is null". We gate on the
+  # host system string on purpose: resolving availability via `builtins.getFlake`
+  # cannot purely lock the tools subflakes' `../..` path input, which breaks
+  # `nix flake check`. Plugins with an explicit non-tool `source` are unaffected.
+  openclawToolsUnsupportedSystems = [ "x86_64-darwin" ];
+  hostSupportsOpenclawTools =
+    !(builtins.elem pkgs.stdenv.hostPlatform.system openclawToolsUnsupportedSystems);
   bundledPluginAvailableForHost =
-    source:
+    name:
     let
-      flake = builtins.getFlake source;
-      raw = flake.openclawPlugin or null;
-      resolved = if builtins.isFunction raw then raw pkgs.stdenv.hostPlatform.system else raw;
+      entry = pluginCatalog.${name} or { };
+      isToolBacked = (entry.tool or null) != null && (entry.source or null) == null;
     in
-    resolved != null;
+    !isToolBacked || hostSupportsOpenclawTools;
 
   bundledPlugins = lib.filter (p: p != null) (
     lib.mapAttrsToList (
@@ -57,7 +60,7 @@ let
       let
         pluginCfg = cfg.bundledPlugins.${name};
       in
-      if (pluginCfg.enable or false) && bundledPluginAvailableForHost source then
+      if (pluginCfg.enable or false) && bundledPluginAvailableForHost name then
         {
           inherit source;
           config = pluginCfg.config or { };
