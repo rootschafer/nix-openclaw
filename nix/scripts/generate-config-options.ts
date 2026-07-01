@@ -169,18 +169,71 @@ const baseTypeForSchema = (schemaObj: JsonSchema, indent: string, pathSegments: 
     return `t.enum [ ${values} ]`;
   }
 
-  if (schema.anyOf && Array.isArray(schema.anyOf) && schema.anyOf.length > 0) {
-    const entries = schema.anyOf as JsonSchema[];
-    const objectUnion = objectUnionTypeForSchemas(flattenUnionEntries(entries), indent);
-    if (objectUnion) return objectUnion;
-    return oneOfTypeForSchemas(entries, indent, pathSegments);
+  // Carrier used by the merge fallback to smuggle a discriminator through.
+  if ((schema as { _taggedDiscriminator?: Discriminator })._taggedDiscriminator) {
+    return renderDiscriminated(
+      (schema as { _taggedDiscriminator: Discriminator })._taggedDiscriminator,
+      indent,
+      pathSegments,
+    );
   }
 
-  if (schema.oneOf && Array.isArray(schema.oneOf) && schema.oneOf.length > 0) {
-    const entries = schema.oneOf as JsonSchema[];
-    const objectUnion = objectUnionTypeForSchemas(flattenUnionEntries(entries), indent);
-    if (objectUnion) return objectUnion;
-    return oneOfTypeForSchemas(entries, indent, pathSegments);
+  // Nix's `types.oneOf` picks a variant via each variant's `check` function.
+  // Submodules' `check` is essentially `isAttrs`, so every attrset passes the
+  // first object-variant's check and `oneOf [sub1 sub2 ...]` always resolves
+  // to sub1 regardless of the value's shape. For object branches we need a
+  // discriminator-aware type (`taggedSubmodule`) instead. Primitive branches
+  // (str, int, bool, …) have discriminating checks and work in `oneOf` as-is.
+  const unionEntriesRaw =
+    schema.anyOf && Array.isArray(schema.anyOf) && schema.anyOf.length > 0
+      ? (schema.anyOf as JsonSchema[])
+      : schema.oneOf && Array.isArray(schema.oneOf) && schema.oneOf.length > 0
+        ? (schema.oneOf as JsonSchema[])
+        : null;
+  if (unionEntriesRaw) {
+    const branches = dedupeSchemas(
+      flattenUnionEntries(unionEntriesRaw).filter((b) => !isNullSchema(b)),
+    );
+    if (branches.length === 1) {
+      return typeForSchema(branches[0], indent, pathSegments);
+    }
+
+    const objectBranches = branches.filter(isObjectLikeSchema);
+    const primitiveBranches = branches.filter((b) => !isObjectLikeSchema(b));
+
+    if (objectBranches.length === 0) {
+      return oneOfTypeForSchemas(primitiveBranches, indent, pathSegments);
+    }
+
+    let objectTypeExpr: string;
+    if (objectBranches.length === 1) {
+      objectTypeExpr = objectTypeForSchema(objectBranches[0], indent, pathSegments);
+    } else {
+      const disc = tryDiscriminator(objectBranches);
+      if (disc) {
+        objectTypeExpr = renderDiscriminated(disc, indent, pathSegments);
+      } else {
+        console.warn(
+          "[generate-config-options] object-only union without a discriminator " +
+            "property; falling back to permissive merged submodule (required-field " +
+            "constraints will be lost for this location).",
+        );
+        objectTypeExpr = objectTypeForSchema(
+          mergeObjectBranches(objectBranches),
+          indent,
+          pathSegments,
+        );
+      }
+    }
+
+    if (primitiveBranches.length === 0) {
+      return objectTypeExpr;
+    }
+    const parts = [
+      ...primitiveBranches.map((e) => `(${typeForSchema(e, indent, pathSegments)})`),
+      `(${objectTypeExpr})`,
+    ].join(" ");
+    return `t.oneOf [ ${parts} ]`;
   }
 
   if (schema.allOf && Array.isArray(schema.allOf) && schema.allOf.length > 0) {
@@ -221,61 +274,299 @@ const baseTypeForSchema = (schemaObj: JsonSchema, indent: string, pathSegments: 
   }
 };
 
-const objectUnionTypeForSchemas = (entries: JsonSchema[], indent: string): string | null => {
-  const discriminator = "source";
-  const variants = entries.map((entry) => deref(entry, new Set()));
-  const propsByVariant = variants.map((entry) => (entry.properties as Record<string, JsonSchema>) || null);
-  if (propsByVariant.some((props) => props === null)) return null;
-  const requiredByVariant = variants.map((entry) => new Set((entry.required as string[]) || []));
+const isObjectLikeSchema = (schemaObj: JsonSchema): boolean => {
+  const schema = deref(schemaObj, new Set());
+  if (schema.type === "object") return true;
+  if (schema.properties !== undefined) return true;
+  if (schema.additionalProperties !== undefined) return true;
+  return false;
+};
 
-  const sourceValues = propsByVariant.map((props) => {
-    const source = deref((props as Record<string, JsonSchema>)[discriminator] || {}, new Set());
-    if (typeof source.const === "string") return source.const;
-    if (Array.isArray(source.enum) && source.enum.length === 1 && typeof source.enum[0] === "string") {
-      return source.enum[0] as string;
-    }
-    return null;
+// Drop non-semantic metadata when comparing schemas for deduplication.
+// `description`, `title`, examples, etc. do not affect the generated Nix
+// type, so two branches that differ only in those fields hash equal. Use a
+// deny-list (not an allow-list) so we recurse correctly into nodes with
+// arbitrary child keys — e.g., `properties` whose keys are domain names
+// like "source", "id", "provider" rather than JSON-schema meta keys.
+const NON_SEMANTIC_KEYS = new Set([
+  "description",
+  "title",
+  "markdownDescription",
+  "examples",
+  "example",
+  "$comment",
+  "deprecated",
+  "readOnly",
+  "writeOnly",
+  "$id",
+  "$schema",
+  "$anchor",
+]);
+
+const normalizeForHash = (value: unknown): unknown => {
+  if (value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map(normalizeForHash);
+  const obj = value as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(obj).sort()) {
+    if (NON_SEMANTIC_KEYS.has(key)) continue;
+    out[key] = normalizeForHash(obj[key]);
+  }
+  return out;
+};
+
+const schemaHashKey = (schema: unknown): string => JSON.stringify(normalizeForHash(schema));
+
+const dedupeSchemas = (branches: JsonSchema[]): JsonSchema[] => {
+  const seen = new Set<string>();
+  const out: JsonSchema[] = [];
+  for (const branch of branches) {
+    const key = schemaHashKey(branch);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(branch);
+  }
+  return out;
+};
+
+const constStringTag = (schemaObj: JsonSchema | undefined): string | null => {
+  if (schemaObj === undefined) return null;
+  const d = deref(schemaObj, new Set());
+  if (typeof d.const === "string") return d.const;
+  if (Array.isArray(d.enum) && d.enum.length === 1 && typeof d.enum[0] === "string") {
+    return d.enum[0];
+  }
+  return null;
+};
+
+type Discriminator = {
+  discriminator: string;
+  variants: { tag: string; schema: JsonSchema }[];
+};
+
+const tryDiscriminator = (branches: JsonSchema[]): Discriminator | null => {
+  if (branches.length < 2) return null;
+  const derefed = branches.map((b) => deref(b, new Set()));
+  if (!derefed.every(isObjectLikeSchema)) return null;
+
+  const propsPerBranch = derefed.map(
+    (b) => (b.properties as Record<string, JsonSchema>) || {},
+  );
+  let commonKeys = Object.keys(propsPerBranch[0]);
+  for (let i = 1; i < propsPerBranch.length; i++) {
+    const keys = new Set(Object.keys(propsPerBranch[i]));
+    commonKeys = commonKeys.filter((k) => keys.has(k));
+  }
+
+  for (const key of commonKeys.sort()) {
+    const tags = propsPerBranch.map((props) => constStringTag(props[key]));
+    if (tags.some((t) => t === null)) continue;
+    const unique = new Set(tags);
+    if (unique.size !== tags.length) continue; // duplicate tag → not a discriminator
+    return {
+      discriminator: key,
+      variants: tags.map((tag, i) => ({ tag: tag as string, schema: derefed[i] })),
+    };
+  }
+  return null;
+};
+
+const renderVariantOptions = (
+  variant: JsonSchema,
+  indent: string,
+  pathSegments: string[],
+): string => {
+  const props = (variant.properties as Record<string, JsonSchema>) || {};
+  const required = new Set((variant.required as string[]) || []);
+  const keys = Object.keys(props).sort();
+  return keys
+    .map((key) => renderOption(key, props[key], required.has(key), indent, [...pathSegments, key]))
+    .join("\n");
+};
+
+const renderTaggedSubmodule = (
+  disc: Discriminator,
+  indent: string,
+  pathSegments: string[],
+): string => {
+  const variantsIndent = `${indent}  `;
+  const variantIndent = `${variantsIndent}  `;
+  const optionIndent = `${variantIndent}  `;
+  const sorted = [...disc.variants].sort((a, b) => a.tag.localeCompare(b.tag));
+  const lines: string[] = [];
+  lines.push(`taggedSubmodule {`);
+  lines.push(`${variantsIndent}discriminator = ${stringify(disc.discriminator)};`);
+  lines.push(`${variantsIndent}variants = {`);
+  for (const { tag, schema } of sorted) {
+    lines.push(`${variantIndent}${nixAttr(tag)} = {`);
+    const body = renderVariantOptions(schema, optionIndent, pathSegments);
+    if (body.length > 0) lines.push(body);
+    lines.push(`${variantIndent}};`);
+  }
+  lines.push(`${variantsIndent}};`);
+  lines.push(`${indent}}`);
+  return lines.join("\n");
+};
+
+// Collapse a discriminated union when every variant renders to identical
+// non-discriminator shape. Compares the *rendered* Nix for each variant
+// (minus the discriminator field) rather than the raw JSON-schema hash —
+// Nix types can't express constraints like `pattern`, `minLength`, or
+// `format` on strings, so two variants whose only schema difference is an
+// unrenderable constraint still emit byte-identical Nix and should
+// collapse. The resulting submodule accepts the union of per-variant
+// discriminator consts as an enum on that one field; everything else is
+// shared, so it renders as a plain `t.submodule` instead of a
+// `taggedSubmodule` with N copies of the same options. Returns null when
+// the variants diverge in anything the Nix renderer actually cares about,
+// which is exactly when `taggedSubmodule` is needed for correctness.
+const tryCollapseFlatDiscriminator = (
+  disc: Discriminator,
+  indent: string,
+  pathSegments: string[],
+): JsonSchema | null => {
+  const { discriminator, variants } = disc;
+  // Match the indent `renderTaggedSubmodule` would use for option bodies so
+  // rendered-string comparison reflects what we'd actually emit.
+  const optionIndent = `${indent}      `;
+  type Stripped = { schema: JsonSchema; rendered: string; discRequired: boolean };
+  const stripped: Stripped[] = variants.map(({ schema }) => {
+    const props = { ...((schema.properties as Record<string, JsonSchema>) || {}) };
+    delete props[discriminator];
+    const requiredRaw = (schema.required as string[]) || [];
+    const discRequired = requiredRaw.includes(discriminator);
+    const required = requiredRaw.filter((r) => r !== discriminator).sort();
+    const strippedSchema: JsonSchema = { ...schema, properties: props, required };
+    return {
+      schema: strippedSchema,
+      rendered: renderVariantOptions(strippedSchema, optionIndent, pathSegments),
+      discRequired,
+    };
   });
-  if (sourceValues.some((value) => value === null)) return null;
 
-  const uniqueSourceValues = Array.from(new Set(sourceValues as string[]));
+  if (!stripped.every((s) => s.rendered === stripped[0].rendered)) return null;
+  if (!stripped.every((s) => s.discRequired === stripped[0].discRequired)) return null;
 
-  const merged: Record<string, JsonSchema[]> = {};
-  for (const props of propsByVariant as Record<string, JsonSchema>[]) {
+  const sortedTags = variants.map((v) => v.tag).slice().sort();
+  const templateSchema = stripped[0].schema;
+  const templateProps = {
+    ...((templateSchema.properties as Record<string, JsonSchema>) || {}),
+    [discriminator]: { enum: sortedTags },
+  };
+  const baseRequired = (templateSchema.required as string[]) || [];
+  const requiredOut = stripped[0].discRequired
+    ? [...baseRequired, discriminator].sort()
+    : baseRequired;
+  return {
+    ...templateSchema,
+    properties: templateProps,
+    required: requiredOut,
+  };
+};
+
+const renderDiscriminated = (
+  disc: Discriminator,
+  indent: string,
+  pathSegments: string[],
+): string => {
+  const collapsed = tryCollapseFlatDiscriminator(disc, indent, pathSegments);
+  if (collapsed) return objectTypeForSchema(collapsed, indent, pathSegments);
+  return renderTaggedSubmodule(disc, indent, pathSegments);
+};
+
+// Last-resort fallback for object-only unions where no discriminator can be
+// identified. Merges all branches into a single permissive submodule.
+// Loses required-field constraints — prefer fixing the upstream schema to
+// use a tagged union so this branch isn't hit.
+const mergeObjectBranches = (branches: JsonSchema[]): JsonSchema => {
+  const propertyVariants: Record<string, JsonSchema[]> = {};
+  let additional: JsonSchema | boolean | undefined;
+  for (const raw of branches) {
+    const branch = deref(raw, new Set());
+    const props = (branch.properties as Record<string, JsonSchema>) || {};
     for (const [key, value] of Object.entries(props)) {
-      if (!merged[key]) merged[key] = [];
-      merged[key].push(value);
+      if (!propertyVariants[key]) propertyVariants[key] = [];
+      propertyVariants[key].push(value);
+    }
+    if (branch.additionalProperties !== undefined && additional === undefined) {
+      additional = branch.additionalProperties as JsonSchema | boolean;
     }
   }
-  const dedupeSchemas = (schemas: JsonSchema[]): JsonSchema[] => {
-    const byKey: Record<string, JsonSchema> = {};
-    for (const schema of schemas) {
-      byKey[JSON.stringify(deref(schema, new Set()))] = schema;
+
+  const mergedProps: Record<string, JsonSchema> = {};
+  for (const [key, variants] of Object.entries(propertyVariants)) {
+    const unique = dedupeSchemas(variants);
+    if (unique.length === 1) {
+      mergedProps[key] = unique[0];
+      continue;
     }
-    return Object.values(byKey);
-  };
-
-  const nextIndent = `${indent}  `;
-  const keys = Object.keys(merged).sort((a, b) => {
-    if (a === discriminator) return -1;
-    if (b === discriminator) return 1;
-    return a.localeCompare(b);
-  });
-  const inner = keys
-    .map((key) => {
-      if (key === discriminator) {
-        return renderOption(key, { enum: uniqueSourceValues }, true, nextIndent);
+    const allEnumish = unique.every((v) => {
+      const d = deref(v, new Set());
+      return d.const !== undefined || Array.isArray(d.enum);
+    });
+    if (allEnumish) {
+      const values: unknown[] = [];
+      for (const v of unique) {
+        const d = deref(v, new Set());
+        if (d.const !== undefined) {
+          if (!values.some((x) => JSON.stringify(x) === JSON.stringify(d.const))) {
+            values.push(d.const);
+          }
+        } else if (Array.isArray(d.enum)) {
+          for (const entry of d.enum) {
+            if (!values.some((x) => JSON.stringify(x) === JSON.stringify(entry))) {
+              values.push(entry);
+            }
+          }
+        }
       }
-      const schemas = dedupeSchemas(merged[key]);
-      const schema = schemas.length === 1 ? schemas[0] : { anyOf: schemas };
-      const required =
-        propsByVariant.every((props) => key in (props as Record<string, JsonSchema>)) &&
-        requiredByVariant.every((requiredKeys) => requiredKeys.has(key));
-      return renderOption(key, schema, required, nextIndent);
-    })
-    .join("\n");
+      mergedProps[key] = { enum: values };
+      continue;
+    }
+    if (unique.every(isObjectLikeSchema)) {
+      const discInner = tryDiscriminator(unique);
+      if (discInner) {
+        mergedProps[key] = { _taggedDiscriminator: discInner } as unknown as JsonSchema;
+      } else {
+        mergedProps[key] = mergeObjectBranches(unique);
+      }
+      continue;
+    }
+    mergedProps[key] = { anyOf: unique };
+  }
 
-  return `t.submodule { options = {\n${inner}\n${indent}}; }`;
+  const result: JsonSchema = {
+    type: "object",
+    properties: mergedProps,
+    required: [],
+  };
+  if (additional !== undefined) {
+    result.additionalProperties = additional;
+  }
+  return result;
+};
+
+// If an object's `additionalProperties` allows unknown keys, return the Nix
+// type that each undeclared key's value should match. Otherwise return null,
+// meaning the submodule should remain strict.
+//
+// JSON Schema → Nix mapping:
+//   false / absent       → null   (strict; typos rejected)
+//   true                 → t.anything
+//   {} (empty schema)    → t.anything  (zod .passthrough() emits this)
+//   non-empty subschema  → typeForSchema(subschema)
+const freeformTypeForAdditional = (
+  additional: unknown,
+  indent: string,
+  pathSegments: string[],
+): string | null => {
+  if (additional === true) return "t.anything";
+  if (additional && typeof additional === "object") {
+    const obj = additional as JsonSchema;
+    if (Object.keys(obj).length === 0) return "t.anything";
+    return typeForSchema(obj, indent, pathSegments);
+  }
+  return null;
 };
 
 const allowsPluginChannelConfigs = (pathSegments: string[]): boolean =>
@@ -304,11 +595,21 @@ const objectTypeForSchema = (schema: JsonSchema, indent: string, pathSegments: s
       renderOption(key, properties[key], requiredList.has(key), nextIndent, [...pathSegments, key])
     )
     .join("\n");
-  const freeform = allowsPluginChannelConfigs(pathSegments)
-    ? " freeformType = t.attrsOf t.anything;"
-    : "";
 
-  return `t.submodule {${freeform} options = {\n${inner}\n${indent}}; }`;
+  // Known fields stay strictly typed via `options = {...}`. When the upstream
+  // zod schema is open-ended (e.g. `.passthrough()` for plugin-defined keys),
+  // attach a `freeformType` so undeclared keys are accepted at their declared
+  // value type without forcing every value through `t.attrs`/`t.anything`.
+  // The `channels` location keeps its permissive plugin-config freeform even
+  // when the schema itself does not declare `additionalProperties`.
+  let freeform = freeformTypeForAdditional(schema.additionalProperties, nextIndent, pathSegments);
+  if (freeform === null && allowsPluginChannelConfigs(pathSegments)) {
+    freeform = "t.attrsOf t.anything";
+  }
+  if (freeform !== null) {
+    return `t.submodule { freeformType = ${freeform}; options = {\n${inner}\n${indent}}; }`;
+  }
+  return `t.submodule { options = {\n${inner}\n${indent}}; }`;
 };
 
 const renderOption = (
@@ -354,7 +655,7 @@ const renderOption = (
     ? `# Generated from upstream OpenClaw schema at rev ${schemaRev}. DO NOT EDIT.`
     : "# Generated from upstream OpenClaw schema. DO NOT EDIT.";
 
-  const output = `${header}\n# Generator: nix/scripts/generate-config-options.ts\n{ lib }:\nlet\n  t = lib.types;\nin\n{\n${body}\n}\n`;
+  const output = `${header}\n# Generator: nix/scripts/generate-config-options.ts\n{ lib }:\nlet\n  t = lib.types;\n  taggedSubmodule = import ./tagged-submodule.nix { inherit lib; };\nin\n{\n${body}\n}\n`;
 
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, output, "utf8");
