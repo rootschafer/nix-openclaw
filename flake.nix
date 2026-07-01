@@ -60,12 +60,14 @@
         };
         openclawToolPkgs = openclawToolPkgsFor system;
         qmdPkgs = qmdPkgsFor system;
+        # On Darwin qmd comes from nix-openclaw-tools. It has no x86_64-darwin
+        # build, and the standalone qmd flake's x86_64-darwin package is a
+        # broken placeholder (its qmd-node-modules FOD ships lib.fakeHash), so
+        # there is no working qmd on Intel Mac — leave it null and gate the qmd
+        # checks off below.
         qmdPackage =
           if pkgs.stdenv.hostPlatform.isDarwin then
-            # Prefer the nix-openclaw-tools qmd build on Darwin, but fall back
-            # to the standalone qmd flake where the tools flake has no build
-            # for this system (e.g. x86_64-darwin has no tools outputs).
-            openclawToolPkgs.qmd or qmdPkgs.qmd or qmdPkgs.default or null
+            openclawToolPkgs.qmd or null
           else
             qmdPkgs.qmd or qmdPkgs.default or null;
         packageSetStable = import ./nix/packages {
@@ -122,7 +124,12 @@
                 includeRuntimePluginSmoke = false;
               };
             };
-            qmdChecks = {
+            # qmd checks require a working qmd package; skip them where qmd has
+            # no build for the host system (x86_64-darwin). `qmd-opt-in` below
+            # stays present (as an empty join) so the proof-check surface keeps
+            # a stable attribute set across systems.
+            qmdAvailable = qmdPackage != null;
+            qmdChecks = pkgs.lib.optionalAttrs qmdAvailable {
               qmd-instance = pkgs.callPackage ./nix/checks/openclaw-default-instance.nix {
                 includeQmdChecks = true;
               };
@@ -214,7 +221,7 @@
               # QMD opt-in: local memory backend only when users enable it.
               qmd-opt-in = pkgs.symlinkJoin {
                 name = "openclaw-qmd-opt-in";
-                paths = [
+                paths = pkgs.lib.optionals qmdAvailable [
                   qmdChecks.qmd-instance
                   qmdChecks.qmd-runtime
                 ];

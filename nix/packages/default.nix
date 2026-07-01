@@ -46,8 +46,10 @@ in
 {
   inherit pnpm_11;
   inherit openclawRuntimePlugins;
-  qmd = qmdPackage;
   openclaw-gateway = openclawGateway;
   openclaw = openclawBundle;
 }
+# qmd has no working build on some systems (e.g. x86_64-darwin); only expose it
+# as a package where it actually resolves, so it is never a null package output.
+// (if qmdPackage != null then { qmd = qmdPackage; } else { })
 // (if isDarwin then { openclaw-app = openclawApp; } else { })
