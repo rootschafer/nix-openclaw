@@ -5368,19 +5368,11 @@ in
       default = null;
     };
     sources = lib.mkOption {
-      type = t.nullOr (t.attrsOf (t.oneOf [ (t.submodule { options = {
+      type = t.nullOr (t.attrsOf (t.submodule { options = {
       type = lib.mkOption {
-        type = t.enum [ "npm" ];
+        type = t.enum [ "clawhub" "git" "npm" ];
       };
-    }; }) (t.submodule { options = {
-      type = lib.mkOption {
-        type = t.enum [ "clawhub" ];
-      };
-    }; }) (t.submodule { options = {
-      type = lib.mkOption {
-        type = t.enum [ "git" ];
-      };
-    }; }) ]));
+    }; }));
       default = null;
     };
   }; });
