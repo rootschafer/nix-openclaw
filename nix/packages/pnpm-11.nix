@@ -55,7 +55,11 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     runHook postInstallCheck
   '';
 
-  passthru.majorVersion = lib.versions.major finalAttrs.version;
+  passthru = {
+    majorVersion = lib.versions.major finalAttrs.version;
+    nodejs = nodejs_22;
+    "nodejs-slim" = nodejs_22;
+  };
 
   meta = {
     description = "Fast, disk space efficient package manager for JavaScript";

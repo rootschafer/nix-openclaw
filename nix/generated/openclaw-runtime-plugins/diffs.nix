@@ -13,15 +13,15 @@
   minHostVersion = ">=2026.4.30";
   expectedIntegrity = "";
   packageName = "@openclaw/diffs";
-  version = "2026.6.11";
-  tarballUrl = "https://registry.npmjs.org/@openclaw/diffs/-/diffs-2026.6.11.tgz";
-  npmIntegrity = "sha512-DI1B4V9ZIiqsAcyUq1XosPIaSNvEA3VnWDggyl3udNJrutKz4vszMimQsYJpyhUhgBv7dPoGe5Au1hyVJgWDAA==";
-  npmShasum = "b4fd3f32f375af0f88f6362a6c95cff21dbe1e0d";
-  nixHash = "sha256-pB4N6MNDiTwJAnPWQFx2cI7Ye/RzzvKNIgnnOodmy1g=";
+  version = "2026.7.1";
+  tarballUrl = "https://registry.npmjs.org/@openclaw/diffs/-/diffs-2026.7.1.tgz";
+  npmIntegrity = "sha512-x4rMir5ukx1j/XvfCHqMaQECb9sT2DzlMFaMZBykLiRf7HPJyALO+nwM1TpS690+yJ7SSh7I3E/Q5DuGy0FHdA==";
+  npmShasum = "83fd42814f6d771b2e7343b33f088a089f36c772";
+  nixHash = "sha256-sgCqxtw2iWCqFWlsm/FdMTB9Bponh6d1TqY+MGHaPQk=";
   dependencyMode = "bundled";
   manifestId = "diffs";
-  openclawCompat = ">=2026.6.11";
-  peerOpenClaw = ">=2026.6.11";
+  openclawCompat = ">=2026.7.1";
+  peerOpenClaw = ">=2026.7.1";
   runtimeExtensions = [
     "./dist/index.js"
   ];
@@ -33,17 +33,15 @@
     ];
   };
   dependencies = {
-    "@pierre/diffs" = "1.2.4";
-    "@pierre/theme" = "1.0.3";
-    "@shikijs/langs" = "4.1.0";
-    playwright-core = "1.60.0";
-    typebox = "1.1.39";
+    "@pierre/diffs" = "1.2.12";
+    "@shikijs/langs" = "4.3.0";
+    playwright-core = "1.61.1";
+    typebox = "1.3.3";
     zod = "4.4.3";
   };
   optionalDependencies = { };
   bundleDependencies = [
     "@pierre/diffs"
-    "@pierre/theme"
     "@shikijs/langs"
     "playwright-core"
     "typebox"
@@ -52,17 +50,14 @@
   bundledPackageRoots = [
     "node_modules/@pierre/diffs"
     "node_modules/@pierre/theme"
+    "node_modules/@pierre/theming"
     "node_modules/@shikijs/core"
-    "node_modules/@shikijs/core/node_modules/@shikijs/types"
     "node_modules/@shikijs/engine-javascript"
-    "node_modules/@shikijs/engine-javascript/node_modules/@shikijs/types"
     "node_modules/@shikijs/engine-oniguruma"
-    "node_modules/@shikijs/engine-oniguruma/node_modules/@shikijs/types"
     "node_modules/@shikijs/langs"
+    "node_modules/@shikijs/primitive"
     "node_modules/@shikijs/themes"
-    "node_modules/@shikijs/themes/node_modules/@shikijs/types"
     "node_modules/@shikijs/transformers"
-    "node_modules/@shikijs/transformers/node_modules/@shikijs/types"
     "node_modules/@shikijs/types"
     "node_modules/@shikijs/vscode-textmate"
     "node_modules/@types/hast"
@@ -94,8 +89,6 @@
     "node_modules/regex-recursion"
     "node_modules/regex-utilities"
     "node_modules/shiki"
-    "node_modules/shiki/node_modules/@shikijs/langs"
-    "node_modules/shiki/node_modules/@shikijs/types"
     "node_modules/space-separated-tokens"
     "node_modules/stringify-entities"
     "node_modules/trim-lines"

@@ -13,16 +13,16 @@
   minHostVersion = ">=2026.4.10";
   expectedIntegrity = "";
   packageName = "@openclaw/matrix";
-  version = "2026.6.11";
-  tarballUrl = "https://clawhub.ai/api/npm/@openclaw/matrix/-/openclaw-matrix-2026.6.11.tgz";
-  npmIntegrity = "sha512-BCBxsDq5LD/1/1B2vcgXO7cDeAxXTWFB2/rpU9nXL/NfmJG59EKtcvw+KS56Hii8XxYbxhWkBt/v4u//j+Ndhg==";
-  npmShasum = "593e6b8e9860ccd096a81a39c7305c650ff7c87e";
-  nixHash = "sha256-NWLeKqK28CpzhlGM9knI0Wir7Ibn9vwCO4wukqWnT6U=";
+  version = "2026.7.1";
+  tarballUrl = "https://clawhub.ai/api/npm/@openclaw/matrix/-/openclaw-matrix-2026.7.1.tgz";
+  npmIntegrity = "sha512-gl5+4iV7tP2vI8eSd1lPp5NfJHM3l+YC5CeUvHdZIDUZDmvjYUR2T9b6SjN4o+XDGcwj5Cvx2ffQcKYMJSjycA==";
+  npmShasum = "2e7c836dd5889524dc5298f771d56c32ca179b35";
+  nixHash = "sha256-STI1yZQU+IQL4TQxip9J3L0/OKhb76DmU1qfHo5oRt0=";
   dependencyMode = "shrinkwrap";
-  npmDepsHash = "sha256-EybqWZfhNz+UP/2E4dOy1V7fEzCnNSPlksCrZIGo8N4=";
+  npmDepsHash = "sha256-Bi7uZSpMwyQeQWbAGRF03uCyvQjAYBPJm7mqKJJ02rc=";
   manifestId = "matrix";
-  openclawCompat = ">=2026.6.11";
-  peerOpenClaw = ">=2026.6.11";
+  openclawCompat = ">=2026.7.1";
+  peerOpenClaw = ">=2026.7.1";
   runtimeExtensions = [
     "./dist/index.js"
   ];
@@ -32,20 +32,20 @@
   ];
   contracts = { };
   dependencies = {
-    "@matrix-org/matrix-sdk-crypto-nodejs" = "0.6.0";
-    "@matrix-org/matrix-sdk-crypto-wasm" = "18.3.0";
+    "@matrix-org/matrix-sdk-crypto-nodejs" = "0.6.1";
+    "@matrix-org/matrix-sdk-crypto-wasm" = "18.3.1";
     fake-indexeddb = "6.2.5";
-    markdown-it = "14.2.0";
-    matrix-js-sdk = "41.6.0";
-    music-metadata = "11.12.3";
-    typebox = "1.1.39";
+    markdown-it = "14.3.0";
+    matrix-js-sdk = "41.9.0-rc.0";
+    music-metadata = "11.13.0";
+    typebox = "1.3.3";
     zod = "4.4.3";
   };
   optionalDependencies = { };
   bundleDependencies = [ ];
   bundledPackageRoots = [ ];
   clawhubPackageName = "@openclaw/matrix";
-  clawhubVersion = "2026.6.11";
+  clawhubVersion = "2026.7.1";
   clawhubArtifactKind = "npm-pack";
-  clawhubArtifactSha256 = "3562de2aa2b6f02a7386518cf649c8d168abec86e7f6fc023b8c2e92a5a74fa5";
+  clawhubArtifactSha256 = "493235c99414f8840be134318a9f49dcbd3f38a85befa0e6535a9f1e8e6846dd";
 }

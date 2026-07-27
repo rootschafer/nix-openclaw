@@ -13,15 +13,15 @@
   minHostVersion = ">=2026.5.12-beta.1";
   expectedIntegrity = "";
   packageName = "@openclaw/amazon-bedrock-mantle-provider";
-  version = "2026.6.11";
-  tarballUrl = "https://registry.npmjs.org/@openclaw/amazon-bedrock-mantle-provider/-/amazon-bedrock-mantle-provider-2026.6.11.tgz";
-  npmIntegrity = "sha512-6X2spe9KvCxqf1rwQjlg7YtsZdV4GRFovuBLakM0hEK3D2uznMD3XcAgSpd6uy7QYV0LRHpR+sRJXfXJiaMvMg==";
-  npmShasum = "c04a0577ade0f7240ac3cad8569d809093fc9e5f";
-  nixHash = "sha256-M/ylnrgIPv5STcQWoxB817Phif4fGVvaUkgTBuzBPGk=";
+  version = "2026.7.1";
+  tarballUrl = "https://registry.npmjs.org/@openclaw/amazon-bedrock-mantle-provider/-/amazon-bedrock-mantle-provider-2026.7.1.tgz";
+  npmIntegrity = "sha512-5zbZXRXGEYLH3OUuJyAnL5qoEjjm5Ktukj2oeiNg01KWcVdLAwYYJODMBVrp024eWQqmsWgTYyNpP88S/mgP2A==";
+  npmShasum = "9854385f3f7caf3d41b7ce4500968642ce5d8178";
+  nixHash = "sha256-P02HP7tmXdEdNp6TpgAHC9cQB7iXsrh03qL5SZxBXOc=";
   dependencyMode = "bundled";
   manifestId = "amazon-bedrock-mantle";
-  openclawCompat = ">=2026.6.11";
-  peerOpenClaw = ">=2026.6.11";
+  openclawCompat = ">=2026.7.1";
+  peerOpenClaw = ">=2026.7.1";
   runtimeExtensions = [
     "./dist/index.js"
   ];
@@ -29,7 +29,7 @@
   channels = [ ];
   contracts = { };
   dependencies = {
-    "@anthropic-ai/sdk" = "0.100.1";
+    "@anthropic-ai/sdk" = "0.109.1";
     "@aws/bedrock-token-generator" = "1.1.0";
   };
   optionalDependencies = { };
@@ -41,11 +41,6 @@
     "node_modules/@anthropic-ai/sdk"
     "node_modules/@aws/bedrock-token-generator"
     "node_modules/@aws/lambda-invoke-store"
-    "node_modules/@aws-crypto/crc32"
-    "node_modules/@aws-crypto/sha256-browser"
-    "node_modules/@aws-crypto/sha256-js"
-    "node_modules/@aws-crypto/supports-web-crypto"
-    "node_modules/@aws-crypto/util"
     "node_modules/@aws-sdk/client-cognito-identity"
     "node_modules/@aws-sdk/core"
     "node_modules/@aws-sdk/credential-provider-cognito-identity"
@@ -63,35 +58,25 @@
     "node_modules/@aws-sdk/token-providers"
     "node_modules/@aws-sdk/types"
     "node_modules/@aws-sdk/util-format-url"
-    "node_modules/@aws-sdk/util-locate-window"
     "node_modules/@aws-sdk/xml-builder"
     "node_modules/@babel/runtime"
-    "node_modules/@nodable/entities"
     "node_modules/@smithy/config-resolver"
     "node_modules/@smithy/core"
     "node_modules/@smithy/credential-provider-imds"
     "node_modules/@smithy/fetch-http-handler"
     "node_modules/@smithy/hash-node"
     "node_modules/@smithy/invalid-dependency"
-    "node_modules/@smithy/is-array-buffer"
     "node_modules/@smithy/node-config-provider"
     "node_modules/@smithy/node-http-handler"
     "node_modules/@smithy/protocol-http"
     "node_modules/@smithy/signature-v4"
     "node_modules/@smithy/types"
-    "node_modules/@smithy/util-buffer-from"
-    "node_modules/@smithy/util-utf8"
     "node_modules/@stablelib/base64"
     "node_modules/bowser"
     "node_modules/fast-sha256"
-    "node_modules/fast-xml-builder"
-    "node_modules/fast-xml-parser"
     "node_modules/json-schema-to-ts"
-    "node_modules/path-expression-matcher"
     "node_modules/standardwebhooks"
-    "node_modules/strnum"
     "node_modules/ts-algebra"
     "node_modules/tslib"
-    "node_modules/xml-naming"
   ];
 }

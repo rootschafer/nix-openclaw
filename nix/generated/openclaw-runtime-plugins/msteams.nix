@@ -13,15 +13,15 @@
   minHostVersion = ">=2026.4.10";
   expectedIntegrity = "";
   packageName = "@openclaw/msteams";
-  version = "2026.6.11";
-  tarballUrl = "https://registry.npmjs.org/@openclaw/msteams/-/msteams-2026.6.11.tgz";
-  npmIntegrity = "sha512-uG8sLDmUeZ1Cc7m2FEgFPkNyW9BFduYF4KgU1BxSY/eTetb7qz3Os6sb60/D0GEgD/OkaOfpbtUcu0240F3iYw==";
-  npmShasum = "21ff0666e61c0e402a72c6e1d685d8d9e8662dd9";
-  nixHash = "sha256-oWF4OyHGUNv7J8XMqzhU6ZD3cAJobqiPVKoPJ2/tWMA=";
+  version = "2026.7.1";
+  tarballUrl = "https://registry.npmjs.org/@openclaw/msteams/-/msteams-2026.7.1.tgz";
+  npmIntegrity = "sha512-gG/Yk6HZAguHwrmKjsqdONbFz5WNy126PEAXQWNW/TulO1kIifQ6tktM16BQPNLnkmWqLbj+TrrO55Cjas1aFg==";
+  npmShasum = "5f5c6969a0cb48feafd2c4a1f87bebced6561a40";
+  nixHash = "sha256-A/xBgfpSwZgraNI9XDIiHWIW0WIGdaYrmlDQPxTU5FI=";
   dependencyMode = "bundled";
   manifestId = "msteams";
-  openclawCompat = ">=2026.6.11";
-  peerOpenClaw = ">=2026.6.11";
+  openclawCompat = ">=2026.7.1";
+  peerOpenClaw = ">=2026.7.1";
   runtimeExtensions = [
     "./dist/index.js"
   ];
@@ -32,10 +32,10 @@
   contracts = { };
   dependencies = {
     "@azure/identity" = "4.13.1";
-    "@microsoft/teams.api" = "2.0.12";
-    "@microsoft/teams.apps" = "2.0.12";
+    "@microsoft/teams.api" = "2.0.13";
+    "@microsoft/teams.apps" = "2.0.13";
     express = "5.2.1";
-    typebox = "1.1.39";
+    typebox = "1.3.3";
   };
   optionalDependencies = { };
   bundleDependencies = [
@@ -59,8 +59,6 @@
     "node_modules/@azure/msal-node"
     "node_modules/@microsoft/teams.api"
     "node_modules/@microsoft/teams.apps"
-    "node_modules/@microsoft/teams.apps/node_modules/@azure/msal-common"
-    "node_modules/@microsoft/teams.apps/node_modules/@azure/msal-node"
     "node_modules/@microsoft/teams.cards"
     "node_modules/@microsoft/teams.common"
     "node_modules/@microsoft/teams.graph"
@@ -73,6 +71,7 @@
     "node_modules/asynckit"
     "node_modules/axios"
     "node_modules/body-parser"
+    "node_modules/body-parser/node_modules/content-type"
     "node_modules/buffer-equal-constant-time"
     "node_modules/bundle-name"
     "node_modules/bytes"
@@ -182,7 +181,6 @@
     "node_modules/typebox"
     "node_modules/undici-types"
     "node_modules/unpipe"
-    "node_modules/uuid"
     "node_modules/vary"
     "node_modules/wrappy"
     "node_modules/wsl-utils"

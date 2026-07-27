@@ -81,7 +81,7 @@ let
     src = resolvedSrc;
     pnpm = selectedPnpm;
     hash = if pnpmDepsHash != null then pnpmDepsHash else lib.fakeHash;
-    fetcherVersion = 3;
+    fetcherVersion = if pnpmMajor == "11" then 4 else 3;
     preFixup = lib.optionalString (pnpmMajor == "11") ''
       expectedIntegrities="$(mktemp)"
       actualIntegrities="$(mktemp)"

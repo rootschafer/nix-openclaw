@@ -13,15 +13,15 @@
   minHostVersion = ">=2026.4.10";
   expectedIntegrity = "";
   packageName = "@openclaw/qqbot";
-  version = "2026.6.11";
-  tarballUrl = "https://registry.npmjs.org/@openclaw/qqbot/-/qqbot-2026.6.11.tgz";
-  npmIntegrity = "sha512-hKxvJSyq0HYRagm7pzTBDUYyg0Ij5owk8fRHi3C+E6mvlNYXPL+Iw3F91xOEBAuK1p6uK5Ha9y2kt61RVtjJog==";
-  npmShasum = "49aa0a87fd8d095d44c3d68db5fbdb0c168574df";
-  nixHash = "sha256-Wrn7Zs/XnpVtHPW8hn4DD7cbEu3WTeAkB6mPY0slJNA=";
+  version = "2026.7.1";
+  tarballUrl = "https://registry.npmjs.org/@openclaw/qqbot/-/qqbot-2026.7.1.tgz";
+  npmIntegrity = "sha512-h5Ak9UyoIzMl1qs88vYwPBdtXDXfUZmta4Tjo1JVtZjEFF/3zl8JOwAfUv739mgBwJ2D7frHz+yvdLXkSV0lfA==";
+  npmShasum = "4c9c98aecf92d2c832048eeca04ac3c994373cd6";
+  nixHash = "sha256-2Bo/p+UzD+4I2Kv95ijT7+3iyz0klhcC56NJPsIyZqk=";
   dependencyMode = "bundled";
   manifestId = "qqbot";
-  openclawCompat = ">=2026.6.11";
-  peerOpenClaw = ">=2026.6.11";
+  openclawCompat = ">=2026.7.1";
+  peerOpenClaw = ">=2026.7.1";
   runtimeExtensions = [
     "./dist/index.js"
   ];

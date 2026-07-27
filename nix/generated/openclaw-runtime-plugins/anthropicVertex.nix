@@ -13,15 +13,15 @@
   minHostVersion = ">=2026.5.12-beta.1";
   expectedIntegrity = "";
   packageName = "@openclaw/anthropic-vertex-provider";
-  version = "2026.6.11";
-  tarballUrl = "https://registry.npmjs.org/@openclaw/anthropic-vertex-provider/-/anthropic-vertex-provider-2026.6.11.tgz";
-  npmIntegrity = "sha512-lFMwoFzN125Vhq2oLOj5pIQ8Y/KjfawkzTRHjAuFiwtxS/tefjpepjYFZ8qPnlcLXyZZO1nh1yS2AtyYwm3w6A==";
-  npmShasum = "13f54415a939c338f02a6e193b9905d22b75ab9e";
-  nixHash = "sha256-NT5w+gid5UyYp4pi8LkI8A1TgQI4jshxPRqmYu3XnNw=";
+  version = "2026.7.1";
+  tarballUrl = "https://registry.npmjs.org/@openclaw/anthropic-vertex-provider/-/anthropic-vertex-provider-2026.7.1.tgz";
+  npmIntegrity = "sha512-zD/7AHXI/PtEYrdG0aVrORi071Yf58pXFdAOnTfn5pfPLER2OAtIiCTfNrzscXrzP3165+o5DTJgTPO1mMv3ew==";
+  npmShasum = "1ffadd149e36a09e4d5f0a5c7f61704f8a666273";
+  nixHash = "sha256-ZoUMjxB2Ww0sC77ZMxtHHQdqzlU+FNFi0Z/6kgC/q+Y=";
   dependencyMode = "bundled";
   manifestId = "anthropic-vertex";
-  openclawCompat = ">=2026.6.11";
-  peerOpenClaw = ">=2026.6.11";
+  openclawCompat = ">=2026.7.1";
+  peerOpenClaw = ">=2026.7.1";
   runtimeExtensions = [
     "./dist/index.js"
   ];
@@ -29,7 +29,7 @@
   channels = [ ];
   contracts = { };
   dependencies = {
-    "@anthropic-ai/vertex-sdk" = "0.16.1";
+    "@anthropic-ai/vertex-sdk" = "0.19.0";
   };
   optionalDependencies = { };
   bundleDependencies = [
@@ -44,29 +44,28 @@
     "node_modules/base64-js"
     "node_modules/bignumber.js"
     "node_modules/buffer-equal-constant-time"
+    "node_modules/data-uri-to-buffer"
     "node_modules/debug"
     "node_modules/ecdsa-sig-formatter"
     "node_modules/extend"
     "node_modules/fast-sha256"
+    "node_modules/fetch-blob"
+    "node_modules/formdata-polyfill"
     "node_modules/gaxios"
     "node_modules/gcp-metadata"
     "node_modules/google-auth-library"
     "node_modules/google-logging-utils"
-    "node_modules/gtoken"
     "node_modules/https-proxy-agent"
-    "node_modules/is-stream"
     "node_modules/json-bigint"
     "node_modules/json-schema-to-ts"
     "node_modules/jwa"
     "node_modules/jws"
     "node_modules/ms"
+    "node_modules/node-domexception"
     "node_modules/node-fetch"
     "node_modules/safe-buffer"
     "node_modules/standardwebhooks"
-    "node_modules/tr46"
     "node_modules/ts-algebra"
-    "node_modules/uuid"
-    "node_modules/webidl-conversions"
-    "node_modules/whatwg-url"
+    "node_modules/web-streams-polyfill"
   ];
 }

@@ -13,15 +13,15 @@
   minHostVersion = ">=2026.5.12-beta.1";
   expectedIntegrity = "";
   packageName = "@openclaw/amazon-bedrock-provider";
-  version = "2026.6.11";
-  tarballUrl = "https://registry.npmjs.org/@openclaw/amazon-bedrock-provider/-/amazon-bedrock-provider-2026.6.11.tgz";
-  npmIntegrity = "sha512-Y+Lsc5v5duwcZPlOQwcQHzcH+maichtFGhUpDqeu3DETat2vreJUZEGrQgxBRPD0CVR7iQmTgYgOIROvv1qq0Q==";
-  npmShasum = "1137200b4b44c2a6e6e3d93e8c14f4613b962139";
-  nixHash = "sha256-OfinVvcIT2jAQCDmnmGSJ5Ay2hEWN++8zFlNCoR50pg=";
+  version = "2026.7.1";
+  tarballUrl = "https://registry.npmjs.org/@openclaw/amazon-bedrock-provider/-/amazon-bedrock-provider-2026.7.1.tgz";
+  npmIntegrity = "sha512-Y7x24MlFCATCVI6C043ikZ/HC8iTvZ3vDd18bhYwlsXUphGRtcOzQALgOQDhd9nYV1s8konjG0CoyB5v+RA9hw==";
+  npmShasum = "bb672fc505187439ec082db050dc73e35a1f955b";
+  nixHash = "sha256-SzRjDQoPcV/J6c8XFmpwHBYxir9LjQTqwb5kVbyRdpE=";
   dependencyMode = "bundled";
   manifestId = "amazon-bedrock";
-  openclawCompat = ">=2026.6.11";
-  peerOpenClaw = ">=2026.6.11";
+  openclawCompat = ">=2026.7.1";
+  peerOpenClaw = ">=2026.7.1";
   runtimeExtensions = [
     "./dist/index.js"
   ];
@@ -33,12 +33,12 @@
     ];
   };
   dependencies = {
-    "@aws-sdk/client-bedrock" = "3.1056.0";
-    "@aws-sdk/client-bedrock-runtime" = "3.1056.0";
-    "@aws-sdk/credential-provider-node" = "3.972.52";
-    "@smithy/node-http-handler" = "4.7.7";
-    "@smithy/shared-ini-file-loader" = "4.5.5";
-    "@smithy/types" = "4.14.3";
+    "@aws-sdk/client-bedrock" = "3.1078.0";
+    "@aws-sdk/client-bedrock-runtime" = "3.1078.0";
+    "@aws-sdk/credential-provider-node" = "3.972.61";
+    "@smithy/node-http-handler" = "4.9.2";
+    "@smithy/shared-ini-file-loader" = "4.6.5";
+    "@smithy/types" = "4.15.1";
   };
   optionalDependencies = { };
   bundleDependencies = [
@@ -51,11 +51,6 @@
   ];
   bundledPackageRoots = [
     "node_modules/@aws/lambda-invoke-store"
-    "node_modules/@aws-crypto/crc32"
-    "node_modules/@aws-crypto/sha256-browser"
-    "node_modules/@aws-crypto/sha256-js"
-    "node_modules/@aws-crypto/supports-web-crypto"
-    "node_modules/@aws-crypto/util"
     "node_modules/@aws-sdk/client-bedrock"
     "node_modules/@aws-sdk/client-bedrock-runtime"
     "node_modules/@aws-sdk/core"
@@ -66,7 +61,6 @@
     "node_modules/@aws-sdk/credential-provider-node"
     "node_modules/@aws-sdk/credential-provider-process"
     "node_modules/@aws-sdk/credential-provider-sso"
-    "node_modules/@aws-sdk/credential-provider-sso/node_modules/@aws-sdk/token-providers"
     "node_modules/@aws-sdk/credential-provider-web-identity"
     "node_modules/@aws-sdk/eventstream-handler-node"
     "node_modules/@aws-sdk/middleware-eventstream"
@@ -75,25 +69,15 @@
     "node_modules/@aws-sdk/signature-v4-multi-region"
     "node_modules/@aws-sdk/token-providers"
     "node_modules/@aws-sdk/types"
-    "node_modules/@aws-sdk/util-locate-window"
     "node_modules/@aws-sdk/xml-builder"
-    "node_modules/@nodable/entities"
     "node_modules/@smithy/core"
     "node_modules/@smithy/credential-provider-imds"
     "node_modules/@smithy/fetch-http-handler"
-    "node_modules/@smithy/is-array-buffer"
     "node_modules/@smithy/node-http-handler"
     "node_modules/@smithy/shared-ini-file-loader"
     "node_modules/@smithy/signature-v4"
     "node_modules/@smithy/types"
-    "node_modules/@smithy/util-buffer-from"
-    "node_modules/@smithy/util-utf8"
     "node_modules/bowser"
-    "node_modules/fast-xml-builder"
-    "node_modules/fast-xml-parser"
-    "node_modules/path-expression-matcher"
-    "node_modules/strnum"
     "node_modules/tslib"
-    "node_modules/xml-naming"
   ];
 }

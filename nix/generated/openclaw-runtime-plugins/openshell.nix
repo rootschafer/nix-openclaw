@@ -13,15 +13,15 @@
   minHostVersion = ">=2026.5.12-beta.1";
   expectedIntegrity = "";
   packageName = "@openclaw/openshell-sandbox";
-  version = "2026.6.11";
-  tarballUrl = "https://registry.npmjs.org/@openclaw/openshell-sandbox/-/openshell-sandbox-2026.6.11.tgz";
-  npmIntegrity = "sha512-PwnmRXuMYY1JVtLMQepGvzxvJVtOKmKtb+kDRxgrmePBxR+yi2HCOU00cyn/s+AR+5P9hXqNhZlxSmok1jR9Lg==";
-  npmShasum = "7ee600ca562c7d9d60a6d74cdcc654cefa8c1835";
-  nixHash = "sha256-Y/oHkESyqh1fTdgRVgHhEw9+eZaReh3nXt6v/LMjPfY=";
+  version = "2026.7.1";
+  tarballUrl = "https://registry.npmjs.org/@openclaw/openshell-sandbox/-/openshell-sandbox-2026.7.1.tgz";
+  npmIntegrity = "sha512-LS5X0x8cuB2XRJJdhZlx+bYUuEtOzByUnr5VW/SA/sXvKbxxM1p5o0iZd2wJuDc9VB6rGGLtuqTaPr1pNegLsQ==";
+  npmShasum = "48a85fef296099469a50ace7e671e4699b1cb742";
+  nixHash = "sha256-jzh35UoRZ8FmZPl/+2wGZehA+fq1zhJ+J8LTiEL0vwM=";
   dependencyMode = "bundled";
   manifestId = "openshell";
-  openclawCompat = ">=2026.6.11";
-  peerOpenClaw = ">=2026.6.11";
+  openclawCompat = ">=2026.7.1";
+  peerOpenClaw = ">=2026.7.1";
   runtimeExtensions = [
     "./dist/index.js"
   ];

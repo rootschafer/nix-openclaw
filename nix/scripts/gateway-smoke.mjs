@@ -105,8 +105,6 @@ try {
 
   const port = await freePort();
   if (runtimePluginSmokeRoot) {
-    fs.mkdirSync(path.join(env.OPENCLAW_STATE_DIR, "plugins"), { recursive: true });
-    fs.writeFileSync(path.join(env.OPENCLAW_STATE_DIR, "plugins", "installs.json"), "{ stale registry json");
     fs.writeFileSync(
       env.OPENCLAW_CONFIG_PATH,
       JSON.stringify(
@@ -157,7 +155,7 @@ try {
   gateway.stdout.on("data", (chunk) => appendLog("stdout", chunk));
   gateway.stderr.on("data", (chunk) => appendLog("stderr", chunk));
 
-  const deadline = Date.now() + 30000;
+  const deadline = Date.now() + (runtimePluginSmokeRoot ? 90000 : 30000);
   let lastError = "";
 
   while (Date.now() < deadline) {

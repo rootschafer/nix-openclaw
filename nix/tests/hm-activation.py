@@ -1,8 +1,8 @@
 start_all()
 
 machine.wait_until_succeeds(
-    "systemctl show -p ActiveState home-manager-alice.service | grep -q 'ActiveState=inactive' && "
-    "systemctl show -p Result home-manager-alice.service | grep -q 'Result=success'"
+    "systemctl show -p Result home-manager-alice.service | grep -q '^Result=success$' && "
+    "systemctl show -p SubState home-manager-alice.service | grep -Eq '^SubState=(dead|exited)$'"
 )
 
 machine.wait_until_succeeds("test -f /home/alice/.openclaw/openclaw.json")

@@ -13,15 +13,15 @@
   minHostVersion = ">=2026.6.8";
   expectedIntegrity = "";
   packageName = "@openclaw/perplexity-plugin";
-  version = "2026.6.11";
-  tarballUrl = "https://registry.npmjs.org/@openclaw/perplexity-plugin/-/perplexity-plugin-2026.6.11.tgz";
-  npmIntegrity = "sha512-Di0FdHl8fXQ4hAInPPYz8bOXl4KpO49YmF7wNDEWj6ikN6xBHqlWajI7Wzifa5tMhY1wYAeeSkhCVEyos1dXww==";
-  npmShasum = "324b870fc9bde856ae3de203b0b4ad553ac82f0c";
-  nixHash = "sha256-suJIoIUJh27VAK1yLZl8+sD4pws7RQQMuuCWZkomxbg=";
+  version = "2026.7.1";
+  tarballUrl = "https://registry.npmjs.org/@openclaw/perplexity-plugin/-/perplexity-plugin-2026.7.1.tgz";
+  npmIntegrity = "sha512-gH9c8189+50ouUcAN6RV7UVVwzibG3gbIt776a7yoGKidDg9R1gDkiZYHMG2PsUw7e2oRvVwn4xzymYpj4f/DA==";
+  npmShasum = "7c5c709d5a5a0cc9b363d3bb69e23780d801969c";
+  nixHash = "sha256-0wF5DKhZb/c4R7C3gm7tLMc8bPMLLCFwBRioMDXkWQo=";
   dependencyMode = "none";
   manifestId = "perplexity";
-  openclawCompat = ">=2026.6.11";
-  peerOpenClaw = ">=2026.6.11";
+  openclawCompat = ">=2026.7.1";
+  peerOpenClaw = ">=2026.7.1";
   runtimeExtensions = [
     "./dist/index.js"
   ];

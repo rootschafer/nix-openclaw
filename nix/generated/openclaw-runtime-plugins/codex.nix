@@ -13,16 +13,16 @@
   minHostVersion = ">=2026.5.1-beta.1";
   expectedIntegrity = "";
   packageName = "@openclaw/codex";
-  version = "2026.6.11";
-  tarballUrl = "https://registry.npmjs.org/@openclaw/codex/-/codex-2026.6.11.tgz";
-  npmIntegrity = "sha512-L9rO95x0DW7rpVJisPv2kkgwr04nKYAA1xbgDXVAm2oh801BCJFIJFo021bvhPmwo7MTAXNcuchO3laGa30QRQ==";
-  npmShasum = "53c6df774222f4ba19ee91b7ddea2bdabc986a26";
-  nixHash = "sha256-qXEKmid1yIabpvtykILKh79w/tyws+4W9Awrm6ab9+U=";
+  version = "2026.7.1";
+  tarballUrl = "https://registry.npmjs.org/@openclaw/codex/-/codex-2026.7.1.tgz";
+  npmIntegrity = "sha512-OCEVg4R3yb5vXZiwchJp02o+XmWklnF9EdcXgQUGfvVELwIwJvvvQYJ0tp0M2zJLuA4zDSYPtFVDGviKRrKd2w==";
+  npmShasum = "2096dc9b3cca035865a624312e2f5f378c2cfc93";
+  nixHash = "sha256-eQnA3lx5w7ANrG+ZpvD4ZkJMcZgYtI2hm1W3Xv1tFX0=";
   dependencyMode = "shrinkwrap";
-  npmDepsHash = "sha256-+8EWiNkCsAtzI2SSVXjk1ITxmTRX/AruB1YoxmeHV3U=";
+  npmDepsHash = "sha256-V4wQYnImpawqfOc6cHsa07YpLhMCPX2mpTEEFVcmwNc=";
   manifestId = "codex";
-  openclawCompat = ">=2026.6.11";
-  peerOpenClaw = ">=2026.6.11";
+  openclawCompat = ">=2026.7.1";
+  peerOpenClaw = ">=2026.7.1";
   runtimeExtensions = [
     "./dist/index.js"
   ];
@@ -35,13 +35,16 @@
     migrationProviders = [
       "codex"
     ];
+    tools = [
+      "codex_threads"
+    ];
     webSearchProviders = [
       "codex"
     ];
   };
   dependencies = {
-    "@openai/codex" = "0.139.0";
-    typebox = "1.1.39";
+    "@openai/codex" = "0.144.3";
+    typebox = "1.3.3";
     ws = "8.21.0";
     zod = "4.4.3";
   };

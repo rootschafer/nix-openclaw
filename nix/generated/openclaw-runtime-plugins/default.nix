@@ -21,6 +21,7 @@
   diffs-language-pack = import ./diffsLanguagePack.nix;
   discord = import ./discord.nix;
   exa = import ./exa.nix;
+  featherless = import ./featherless.nix;
   feishu = import ./feishu.nix;
   firecrawl = import ./firecrawl.nix;
   fireworks = import ./fireworks.nix;
@@ -36,9 +37,11 @@
   line = import ./line.nix;
   llama-cpp = import ./llamaCpp.nix;
   lobster = import ./lobster.nix;
+  longcat = import ./longcat.nix;
   matrix = import ./matrix.nix;
   mattermost = import ./mattermost.nix;
   memory-lancedb = import ./memoryLancedb.nix;
+  meta = import ./meta.nix;
   moonshot = import ./moonshot.nix;
   msteams = import ./msteams.nix;
   nextcloud-talk = import ./nextcloudTalk.nix;

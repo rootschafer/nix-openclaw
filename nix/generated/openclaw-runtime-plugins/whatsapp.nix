@@ -13,16 +13,16 @@
   minHostVersion = ">=2026.4.25";
   expectedIntegrity = "";
   packageName = "@openclaw/whatsapp";
-  version = "2026.6.11";
-  tarballUrl = "https://clawhub.ai/api/npm/@openclaw/whatsapp/-/openclaw-whatsapp-2026.6.11.tgz";
-  npmIntegrity = "sha512-8IrUyE3KlsFxpDd9Yb+/A8oEpELI5GQyqLcGTRiPrT+kAwmzi/znTGSNt3sQjPSgRU28XuaLdvixEU6A+RRXUQ==";
-  npmShasum = "ee62cbcf3c2b5932598b6e812740583e6b5243d0";
-  nixHash = "sha256-T3WVRXj6v82IyKEwW3l1zd0xqhJCuxf4MdkYjqNYD0I=";
+  version = "2026.7.1";
+  tarballUrl = "https://clawhub.ai/api/npm/@openclaw/whatsapp/-/openclaw-whatsapp-2026.7.1.tgz";
+  npmIntegrity = "sha512-oymPNeprQ3jBL89aima9ou0Dfj185JTVF9ic2ccX+ho3dHXALP9TADZpgx3q41JAr8CUlFyfc/a+9MFeYEn7ZQ==";
+  npmShasum = "1dbd5ad7a1cb623a89478196bcbd24e593cb81d1";
+  nixHash = "sha256-sdm2t01PGNHeXI+RZz6wW+WHXAEm5CwMNFqlUOsAxmM=";
   dependencyMode = "shrinkwrap";
-  npmDepsHash = "sha256-vUObe1BWV3Sc54tkdE+FzWHlkQp2EiBMtkgrFI5aFlY=";
+  npmDepsHash = "sha256-5aCJUUkxJ34u1bpIajTgYe56nbg1nCo9L6wJRRjKTK0=";
   manifestId = "whatsapp";
-  openclawCompat = ">=2026.6.11";
-  peerOpenClaw = ">=2026.6.11";
+  openclawCompat = ">=2026.7.1";
+  peerOpenClaw = ">=2026.7.1";
   runtimeExtensions = [
     "./dist/index.js"
   ];
@@ -30,17 +30,21 @@
   channels = [
     "whatsapp"
   ];
-  contracts = { };
+  contracts = {
+    tools = [
+      "whatsapp_call"
+    ];
+  };
   dependencies = {
     audio-decode = "2.2.3";
     baileys = "7.0.0-rc13";
-    typebox = "1.1.39";
+    typebox = "1.3.3";
   };
   optionalDependencies = { };
   bundleDependencies = [ ];
   bundledPackageRoots = [ ];
   clawhubPackageName = "@openclaw/whatsapp";
-  clawhubVersion = "2026.6.11";
+  clawhubVersion = "2026.7.1";
   clawhubArtifactKind = "npm-pack";
-  clawhubArtifactSha256 = "4f75954578fabfcd88c8a1305b7975cddd31aa1242bb17f831d9188ea3580f42";
+  clawhubArtifactSha256 = "b1d9b6b74d4f18d1de5c8f91673eb05be5875c0126e42c0c345aa550eb00c663";
 }

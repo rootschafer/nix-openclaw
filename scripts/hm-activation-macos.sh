@@ -61,6 +61,11 @@ if command -v launchctl >/dev/null 2>&1; then
   fi
 
   openclaw_bin=$(/usr/libexec/PlistBuddy -c "Print :ProgramArguments:0" "$plist")
+  if [ "$openclaw_bin" = "/bin/sh" ]; then
+    launcher_command=$(/usr/libexec/PlistBuddy -c "Print :ProgramArguments:2" "$plist")
+    openclaw_bin=${launcher_command#*exec }
+    openclaw_bin=${openclaw_bin%% gateway*}
+  fi
   grep -q OPENCLAW_TEST_SECRET "$openclaw_bin"
   health_file="$home_dir/gateway-health.json"
   healthy=false
